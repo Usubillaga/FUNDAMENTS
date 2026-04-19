@@ -3,20 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Automated Fundamental Analyzer (Yahoo Finance API)</title>
+    <title>Automated Fundamental Analyzer (Alpha Vantage)</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; padding: 20px; line-height: 1.6; }
         .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; }
-        .control-panel { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
-        label { font-weight: bold; font-size: 16px; color: #555; display: block; margin-bottom: 10px; }
-        input { width: 60%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; text-transform: uppercase; margin-bottom: 15px; }
-        button { width: 60%; padding: 15px; background-color: #7209b7; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.3s; }
-        button:hover { background-color: #560bad; }
+        .control-panel { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .input-group { display: flex; gap: 15px; margin-bottom: 15px; }
+        .input-group > div { flex: 1; }
+        label { font-weight: bold; font-size: 14px; color: #555; display: block; margin-bottom: 5px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
+        #ticker { text-transform: uppercase; }
+        button { width: 100%; padding: 15px; background-color: #009688; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.3s; }
+        button:hover { background-color: #00796b; }
         .loader { display: none; text-align: center; font-style: italic; color: #666; margin: 20px 0; font-weight: bold; }
         .dashboard { display: none; margin-top: 30px; }
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .metric { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e1e4e8; border-left: 5px solid #7209b7; }
+        .metric { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e1e4e8; border-left: 5px solid #009688; }
         .alert-red { border-left-color: #dc3545; background-color: #fff5f5; }
         .alert-yellow { border-left-color: #ffc107; background-color: #fffdf5; }
         .alert-green { border-left-color: #28a745; background-color: #f4fff5; }
@@ -32,17 +35,24 @@
 
 <div class="container">
     <h1>Automated Fundamental Analyzer</h1>
-    <p style="text-align: center; color: #666;">Powered by Yahoo Finance (No API Key Required | Unlimited Scans)</p>
+    <p style="text-align: center; color: #666;">Powered by Alpha Vantage (5-Year Historical Data)</p>
     
     <div class="control-panel">
-        <label for="ticker">Enter Stock Ticker:</label>
-        <input type="text" id="ticker" placeholder="e.g. AAPL, MSFT, TSLA">
-        <br>
+        <div class="input-group">
+            <div>
+                <label for="apiKey">Alpha Vantage API Key:</label>
+                <input type="password" id="apiKey" placeholder="Paste your free API key here">
+            </div>
+            <div>
+                <label for="ticker">Stock Ticker:</label>
+                <input type="text" id="ticker" placeholder="e.g. AAPL, MSFT, SAP">
+            </div>
+        </div>
         <button onclick="fetchData()">Run Analysis</button>
         <div id="errorMessage" class="error"></div>
     </div>
     
-    <div id="loader" class="loader">Extracting financial data from Yahoo Finance servers...</div>
+    <div id="loader" class="loader">Downloading 5-year financials and calculating metrics... (This takes a few seconds)</div>
     
     <div id="dashboard" class="dashboard">
         <h2 id="companyTitle" style="text-align: center; color: #2c3e50;"></h2>
@@ -52,30 +62,40 @@
 </div>
 
 <script>
-    // We use AllOrigins as a reliable public proxy to bypass CORS restrictions in the browser
-    const CORS_PROXY = "https://api.allorigins.win/raw?url=";
-
     async function fetchData() {
+        const apiKey = document.getElementById('apiKey').value.trim();
         const ticker = document.getElementById('ticker').value.trim().toUpperCase();
         const errBox = document.getElementById('errorMessage');
 
         errBox.style.display = 'none';
         document.getElementById('dashboard').style.display = 'none';
 
+        if (!apiKey) return showError("Please enter your Alpha Vantage API Key.");
         if (!ticker) return showError("Please enter a stock ticker.");
+
         document.getElementById('loader').style.display = 'block';
 
         try {
-            // Fetching hidden Yahoo Finance API endpoints
-            const targetUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=financialData,defaultKeyStatistics,summaryDetail,incomeStatementHistory,balanceSheetHistory`;
-            const res = await fetch(`${CORS_PROXY}${encodeURIComponent(targetUrl)}`);
-            const data = await res.json();
+            // Fetching data from Alpha Vantage Official APIs
+            const [quoteRes, incomeRes, balanceRes] = await Promise.all([
+                fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${apiKey}`),
+                fetch(`https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol=${ticker}&apikey=${apiKey}`),
+                fetch(`https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol=${ticker}&apikey=${apiKey}`)
+            ]);
 
-            if (!data.quoteSummary || !data.quoteSummary.result) {
-                throw new Error("Ticker not found or financial data unavailable on Yahoo Finance.");
+            const quoteData = await quoteRes.json();
+            const incomeData = await incomeRes.json();
+            const balanceData = await balanceRes.json();
+
+            // Alpha Vantage Rate Limit Error Check
+            if (quoteData.Information || incomeData.Information) {
+                throw new Error("API Daily/Minute Rate Limit Reached. Please wait a minute or try again tomorrow.");
+            }
+            if (Object.keys(quoteData['Global Quote'] || {}).length === 0) {
+                throw new Error("Ticker not found.");
             }
 
-            processMetrics(ticker, data.quoteSummary.result[0]);
+            processMetrics(ticker, quoteData['Global Quote'], incomeData.annualReports, balanceData.annualReports);
 
         } catch (error) {
             showError(error.message);
@@ -90,68 +110,65 @@
         errBox.style.display = 'block';
     }
 
-    function processMetrics(ticker, result) {
-        // Helper to safely extract Yahoo's weird nested JSON format
-        const safeRaw = (obj) => obj && obj.raw !== undefined ? obj.raw : null;
-
-        const currentPrice = safeRaw(result.financialData.currentPrice);
-        const eps = safeRaw(result.defaultKeyStatistics.trailingEps);
-        const sharesOut = safeRaw(result.defaultKeyStatistics.sharesOutstanding);
-        
-        // Income History (Array where index 0 is the most recent year)
-        const incomeHistory = result.incomeStatementHistory?.incomeStatementHistory || [];
-        const balanceHistory = result.balanceSheetHistory?.balanceSheetStatements || [];
-
-        if (incomeHistory.length < 2) {
-            return showError("Not enough historical financial data to calculate trends.");
+    function processMetrics(ticker, quote, incomeHistory, balanceHistory) {
+        if (!incomeHistory || incomeHistory.length < 2) {
+            return showError("Not enough historical data available for this ticker.");
         }
 
-        const yearsOfData = incomeHistory.length; // Usually 4 years on Yahoo
-        const currentIncome = incomeHistory[0];
-        const oldestIncome = incomeHistory[incomeHistory.length - 1];
-
-        const currentRev = safeRaw(currentIncome.totalRevenue);
-        const oldestRev = safeRaw(oldestIncome.totalRevenue);
+        const currentPrice = parseFloat(quote['05. price']);
         
-        const currentNet = safeRaw(currentIncome.netIncome);
-        const oldestNet = safeRaw(oldestIncome.netIncome);
+        // Ensure we take up to 5 years of data
+        const maxYears = Math.min(incomeHistory.length, 5);
+        const currentIncome = incomeHistory[0]; // Most recent year
+        const oldestIncome = incomeHistory[maxYears - 1]; // Up to 5 years ago
+        const currentBalance = balanceHistory[0];
 
-        // Debt (If undefined, assume 0)
-        const currentDebt = balanceHistory.length > 0 ? (safeRaw(balanceHistory[0].longTermDebt) || 0) : 0;
+        const currentRev = parseFloat(currentIncome.totalRevenue);
+        const oldestRev = parseFloat(oldestIncome.totalRevenue);
+        
+        const currentNet = parseFloat(currentIncome.netIncome);
+        const oldestNet = parseFloat(oldestIncome.netIncome);
+
+        const epsBasic = parseFloat(currentIncome.reportedEPS) || 0; // Sometimes missing, default to 0
+        const debt = parseFloat(currentBalance.longTermDebt) || 0;
 
         document.getElementById('companyTitle').innerText = `${ticker} Analysis`;
 
         let html = '';
         let isSustainable = true;
 
-        // 1. Current P/E Ratio
-        let peRatio = safeRaw(result.summaryDetail?.trailingPE) || (currentPrice && eps > 0 ? currentPrice / eps : 0);
-        if (peRatio > 0) {
+        // 1. Current P/E Ratio (Estimate using Net Income and Price, since pure EPS might be absent in standard AV call)
+        // Alternative: P/E is usually calculated via Overview API, but we are saving API calls.
+        let epsEst = epsBasic;
+        let peRatio = 0;
+        
+        if (epsEst > 0) {
+            peRatio = currentPrice / epsEst;
             const peClass = peRatio > 25 ? 'alert-yellow' : 'alert-green';
-            html += createCard('Current P/E Ratio', `${peRatio.toFixed(2)}x`, peClass, `Price: $${currentPrice.toFixed(2)} / EPS: $${eps.toFixed(2)}`);
+            html += createCard('Current P/E Ratio (Est.)', `${peRatio.toFixed(2)}x`, peClass, `Price: $${currentPrice.toFixed(2)} / EPS: $${epsEst.toFixed(2)}`);
         } else {
-            html += createCard('Current P/E Ratio', 'Negative', 'alert-red', 'Company is currently losing money.');
+            html += createCard('Current P/E Ratio', 'N/A / Negative', 'alert-red', 'Negative or missing EPS data.');
             isSustainable = false;
         }
 
-        // 2. Revenue CAGR (Growth)
+        // 2. Revenue CAGR
         if (currentRev > 0 && oldestRev > 0) {
-            const timePeriods = yearsOfData - 1; // 4 data points = 3 growth periods
+            const timePeriods = maxYears - 1;
             const revCagr = (Math.pow((currentRev / oldestRev), (1 / timePeriods)) - 1) * 100;
             const revClass = revCagr <= 0 ? 'alert-red' : (revCagr < 5 ? 'alert-yellow' : 'alert-green');
             if (revCagr <= 0) isSustainable = false;
-            html += createCard(`${yearsOfData}-Year Revenue CAGR`, `${revCagr.toFixed(2)}%`, revClass, `From $${(oldestRev/1e9).toFixed(2)}B to $${(currentRev/1e9).toFixed(2)}B`);
+            html += createCard(`${maxYears}-Year Revenue CAGR`, `${revCagr.toFixed(2)}%`, revClass, `From $${(oldestRev/1e9).toFixed(2)}B to $${(currentRev/1e9).toFixed(2)}B`);
         }
 
-        // 3. Net Income CAGR (Used as a proxy for EPS growth since Yahoo hides historical EPS)
+        // 3. Net Income CAGR
         if (currentNet > 0 && oldestNet > 0) {
-            const timePeriods = yearsOfData - 1;
+            const timePeriods = maxYears - 1;
             const netCagr = (Math.pow((currentNet / oldestNet), (1 / timePeriods)) - 1) * 100;
             const netClass = netCagr <= 0 ? 'alert-red' : (netCagr < 5 ? 'alert-yellow' : 'alert-green');
             if (netCagr <= 0) isSustainable = false;
-            html += createCard(`${yearsOfData}-Year Profit Growth`, `${netCagr.toFixed(2)}%`, netClass, `Net Income CAGR`);
+            html += createCard(`${maxYears}-Year Net Income CAGR`, `${netCagr.toFixed(2)}%`, netClass, `Profit growth trend`);
         } else {
-            html += createCard('Profit Growth', 'Negative/NA', 'alert-red', 'Historical profits were negative.');
+            html += createCard('Profit Growth', 'N/A', 'alert-red', 'Negative historical profits restrict calculation.');
             isSustainable = false;
         }
 
@@ -165,10 +182,10 @@
 
         // 5. Debt to Revenue Ratio
         if (currentRev > 0) {
-            const debtRatio = currentDebt / currentRev;
+            const debtRatio = debt / currentRev;
             const debtClass = debtRatio > 1.5 ? 'alert-red' : (debtRatio > 0.8 ? 'alert-yellow' : 'alert-green');
             if (debtRatio > 2.0) isSustainable = false;
-            html += createCard('Debt / Revenue', `${debtRatio.toFixed(2)}x`, debtClass, `Long Term Debt: $${(currentDebt/1e9).toFixed(2)}B`);
+            html += createCard('Debt / Revenue', `${debtRatio.toFixed(2)}x`, debtClass, `Long Term Debt: $${(debt/1e9).toFixed(2)}B`);
         }
 
         document.getElementById('metricsGrid').innerHTML = html;
