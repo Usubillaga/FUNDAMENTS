@@ -3,221 +3,473 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Automated Fundamental Analyzer (Alpha Vantage)</title>
+    <title>Ultimate Value Investing Screener & Database</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; padding: 20px; line-height: 1.6; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; }
-        .control-panel { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .input-group { display: flex; gap: 15px; margin-bottom: 15px; }
-        .input-group > div { flex: 1; }
-        label { font-weight: bold; font-size: 14px; color: #555; display: block; margin-bottom: 5px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
-        #ticker { text-transform: uppercase; }
-        button { width: 100%; padding: 15px; background-color: #009688; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.3s; }
-        button:hover { background-color: #00796b; }
-        .loader { display: none; text-align: center; font-style: italic; color: #666; margin: 20px 0; font-weight: bold; }
-        .dashboard { display: none; margin-top: 30px; }
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .metric { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e1e4e8; border-left: 5px solid #009688; }
-        .alert-red { border-left-color: #dc3545; background-color: #fff5f5; }
-        .alert-yellow { border-left-color: #ffc107; background-color: #fffdf5; }
-        .alert-green { border-left-color: #28a745; background-color: #f4fff5; }
-        .verdict-box { padding: 20px; border-radius: 8px; text-align: center; font-size: 22px; font-weight: bold; color: white; text-transform: uppercase; letter-spacing: 1px; }
-        .verdict-good { background-color: #28a745; }
-        .verdict-high { background-color: #fd7e14; }
-        .verdict-bad { background-color: #dc3545; }
-        .small-text { font-size: 12px; color: #666; margin-top: 5px; display: block; }
-        .error { color: #dc3545; font-weight: bold; text-align: center; margin-top: 10px; display: none; }
+        :root {
+            --primary: #2563eb;
+            --secondary: #64748b;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --warning: #ca8a04;
+            --dark: #1e293b;
+            --light: #f8fafc;
+        }
+
+        body { 
+            font-family: 'Inter', -apple-system, sans-serif; 
+            background-color: #f1f5f9; 
+            color: #334155; 
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container { 
+            max-width: 1100px; 
+            margin: 0 auto; 
+            background: white; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05); 
+        }
+
+        h1 { color: var(--dark); text-align: center; margin-bottom: 30px; font-weight: 800; border-bottom: 3px solid var(--primary); display: inline-block; width: 100%; padding-bottom: 10px; }
+        
+        .db-panel { 
+            background: var(--light); 
+            padding: 25px; 
+            border-radius: 10px; 
+            margin-bottom: 30px; 
+            border: 1px solid #e2e8f0;
+        }
+
+        .db-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; color: var(--secondary); font-weight: bold; }
+
+        .flex-row { display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 25px; }
+        .input-group { display: flex; flex-direction: column; flex: 1; min-width: 180px; }
+        
+        label { font-weight: 600; font-size: 0.85rem; margin-bottom: 6px; color: var(--secondary); text-transform: uppercase; }
+        
+        input, select { 
+            padding: 10px; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 6px; 
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+
+        input:focus, select:focus { border-color: var(--primary); outline: none; box-shadow: 0 0 0 2px rgba(37,99,235,0.2); }
+
+        .btn { 
+            padding: 10px 18px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-weight: 600; 
+            font-size: 14px; 
+            transition: 0.2s; 
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-save { background-color: var(--success); color: white; }
+        .btn-load { background-color: var(--primary); color: white; }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-export { background-color: var(--secondary); color: white; }
+        .btn-sync { background-color: #7c3aed; color: white; }
+        .btn-fetch { background-color: #4f46e5; color: white; }
+        .btn-main { background-color: var(--dark); color: white; width: 100%; padding: 18px; font-size: 18px; margin-top: 20px; text-transform: uppercase; letter-spacing: 1px;}
+        .btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+        .table-container { overflow-x: auto; margin-bottom: 25px; }
+        table { width: 100%; border-collapse: collapse; min-width: 800px; }
+        th, td { padding: 14px; text-align: center; border: 1px solid #e2e8f0; }
+        th { background-color: var(--dark); color: white; font-size: 13px; text-transform: uppercase; }
+        td:first-child { text-align: left; background-color: var(--light); font-weight: bold; width: 200px; color: var(--dark); }
+        table input { width: 100%; border: none; background: transparent; text-align: center; font-family: 'Courier New', monospace; font-size: 16px; }
+
+        .dashboard { display: none; margin-top: 40px; animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .metric { background: white; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0; border-top: 5px solid var(--primary); transition: 0.3s; }
+        .metric:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        
+        .alert-red { border-top-color: var(--danger); background-color: #fffafb; }
+        .alert-yellow { border-top-color: var(--warning); background-color: #fffdf7; }
+        .alert-green { border-top-color: var(--success); background-color: #f7fee7; }
+
+        .verdict-box { padding: 30px; border-radius: 10px; text-align: center; font-size: 26px; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: 1.5px; }
+        .verdict-good { background-color: var(--success); }
+        .verdict-high { background-color: var(--warning); color: #1e293b; }
+        .verdict-bad { background-color: var(--danger); }
+
+        #fileInput { display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Automated Fundamental Analyzer</h1>
-    <p style="text-align: center; color: #666;">Powered by Alpha Vantage (5-Year Historical Data)</p>
-    
-    <div class="control-panel">
-        <div class="input-group">
-            <div>
-                <label for="apiKey">Alpha Vantage API Key:</label>
-                <input type="password" id="apiKey" placeholder="Paste your free API key here">
+    <h1>10-K PROFESSIONAL ANALYZER</h1>
+
+    <div class="db-panel">
+        <div class="db-header">📂 1. LOCAL DATABASE MANAGEMENT</div>
+        <div class="flex-row">
+            <div class="input-group">
+                <label for="tickerInput">Company Ticker</label>
+                <input type="text" id="tickerInput" placeholder="AAPL" style="text-transform: uppercase;">
             </div>
-            <div>
-                <label for="ticker">Stock Ticker:</label>
-                <input type="text" id="ticker" placeholder="e.g. AAPL, MSFT, SAP">
+            <button class="btn btn-save" onclick="saveToDatabase()">Save Current Data</button>
+            
+            <div class="input-group" style="margin-left: auto;">
+                <label for="savedCompanies">Select Saved Asset</label>
+                <select id="savedCompanies">
+                    <option value="">-- No records found --</option>
+                </select>
             </div>
+            <button class="btn btn-load" onclick="loadFromDatabase()">Load</button>
+            <button class="btn btn-danger" onclick="deleteFromDatabase()">Delete</button>
         </div>
-        <button onclick="fetchData()">Run Analysis</button>
-        <div id="errorMessage" class="error"></div>
+
+        <div class="db-header" style="margin-top: 30px; border-top: 1px solid #cbd5e1; padding-top: 20px;">☁️ 2. CLOUD SYNC (GITHUB API)</div>
+        <div class="flex-row" style="background: #e2e8f0; padding: 15px; border-radius: 8px;">
+            <div class="input-group">
+                <label>GitHub Username</label>
+                <input type="text" id="ghUser" placeholder="e.g. juanperez">
+            </div>
+            <div class="input-group">
+                <label>Repository Name</label>
+                <input type="text" id="ghRepo" placeholder="e.g. value-screener">
+            </div>
+            <div class="input-group">
+                <label>Personal Access Token</label>
+                <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxxx">
+            </div>
+            <button class="btn btn-sync" onclick="syncToGitHub()">☁️ Push to Repo</button>
+            <button class="btn btn-fetch" onclick="loadFromGitHub()">📥 Fetch from Repo</button>
+        </div>
+
+        <div class="db-header" style="margin-top: 30px; border-top: 1px solid #cbd5e1; padding-top: 20px;">⚙️ 3. LOCAL FILE EXPORT</div>
+        <div class="flex-row" style="margin-bottom: 0;">
+            <button class="btn btn-export" onclick="exportJSON()">Backup (.json)</button>
+            <button class="btn btn-export" onclick="exportTXT()">Text Report (.txt)</button>
+            <button class="btn btn-export" onclick="exportCSV()">Excel Sheet (.csv)</button>
+            <button class="btn btn-export" style="background-color: #475569;" onclick="document.getElementById('fileInput').click()">Import Local File</button>
+            <input type="file" id="fileInput" accept=".json" onchange="importDatabase(event)">
+        </div>
     </div>
-    
-    <div id="loader" class="loader">Downloading 5-year financials and calculating metrics... (This takes a few seconds)</div>
-    
+
+    <div class="flex-row">
+        <div class="input-group" style="max-width: 250px;">
+            <label for="currentPrice">Current Stock Price ($)</label>
+            <input type="number" id="currentPrice" placeholder="0.00" step="0.01">
+        </div>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric (Annual 10-K)</th>
+                    <th>Year 1 (Oldest)</th>
+                    <th>Year 2</th>
+                    <th>Year 3</th>
+                    <th>Year 4</th>
+                    <th>Year 5 (Current)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Revenue</td><td><input type="number" id="r1"></td><td><input type="number" id="r2"></td><td><input type="number" id="r3"></td><td><input type="number" id="r4"></td><td><input type="number" id="r5"></td></tr>
+                <tr><td>Net Income</td><td><input type="number" id="ni1"></td><td><input type="number" id="ni2"></td><td><input type="number" id="ni3"></td><td><input type="number" id="ni4"></td><td><input type="number" id="ni5"></td></tr>
+                <tr><td>Long-Term Debt</td><td><input type="number" id="d1"></td><td><input type="number" id="d2"></td><td><input type="number" id="d3"></td><td><input type="number" id="d4"></td><td><input type="number" id="d5"></td></tr>
+                <tr><td>Basic EPS</td><td><input type="number" id="eb1" step="0.01"></td><td><input type="number" id="eb2" step="0.01"></td><td><input type="number" id="eb3" step="0.01"></td><td><input type="number" id="eb4" step="0.01"></td><td><input type="number" id="eb5" step="0.01"></td></tr>
+                <tr><td>Diluted EPS</td><td><input type="number" id="ed1" step="0.01"></td><td><input type="number" id="ed2" step="0.01"></td><td><input type="number" id="ed3" step="0.01"></td><td><input type="number" id="ed4" step="0.01"></td><td><input type="number" id="ed5" step="0.01"></td></tr>
+                <tr><td>Dividends per Share ($)</td><td><input type="number" id="div1" step="0.01"></td><td><input type="number" id="div2" step="0.01"></td><td><input type="number" id="div3" step="0.01"></td><td><input type="number" id="div4" step="0.01"></td><td><input type="number" id="div5" step="0.01"></td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <button class="btn btn-main" onclick="calculateAnalysis()">RUN FINANCIAL DIAGNOSTIC</button>
+
     <div id="dashboard" class="dashboard">
-        <h2 id="companyTitle" style="text-align: center; color: #2c3e50;"></h2>
+        <h2 id="resultHeader" style="text-align: center; color: #1e293b;">Analysis Results</h2>
+        <div id="verdictContainer" style="margin-bottom: 30px;"></div>
         <div class="metrics-grid" id="metricsGrid"></div>
-        <div id="verdictContainer"></div>
     </div>
 </div>
 
 <script>
-    async function fetchData() {
-        const apiKey = document.getElementById('apiKey').value.trim();
-        const ticker = document.getElementById('ticker').value.trim().toUpperCase();
-        const errBox = document.getElementById('errorMessage');
+    // Constants including the Dividend fields
+    const FIELDS = [
+        'currentPrice', 
+        'r1','r2','r3','r4','r5', 
+        'ni1','ni2','ni3','ni4','ni5', 
+        'd1','d2','d3','d4','d5', 
+        'eb1','eb2','eb3','eb4','eb5', 
+        'ed1','ed2','ed3','ed4','ed5',
+        'div1','div2','div3','div4','div5'
+    ];
+    let db = JSON.parse(localStorage.getItem('investor_master_db')) || {};
 
-        errBox.style.display = 'none';
+    // --- 1. LOCAL DATABASE FUNCTIONS ---
+    function saveToDatabase() {
+        const ticker = document.getElementById('tickerInput').value.trim().toUpperCase();
+        if (!ticker) return alert("Ticker required.");
+        
+        let data = {};
+        FIELDS.forEach(f => data[f] = document.getElementById(f).value);
+        db[ticker] = data;
+        localStorage.setItem('investor_master_db', JSON.stringify(db));
+        updateList();
+        alert(ticker + " saved successfully.");
+    }
+
+    function loadFromDatabase() {
+        const ticker = document.getElementById('savedCompanies').value;
+        if (!ticker) return;
+        document.getElementById('tickerInput').value = ticker;
+        const data = db[ticker];
+        FIELDS.forEach(f => document.getElementById(f).value = data[f] || '');
         document.getElementById('dashboard').style.display = 'none';
+    }
 
-        if (!apiKey) return showError("Please enter your Alpha Vantage API Key.");
-        if (!ticker) return showError("Please enter a stock ticker.");
+    function deleteFromDatabase() {
+        const ticker = document.getElementById('savedCompanies').value;
+        if (ticker && confirm("Delete " + ticker + "?")) {
+            delete db[ticker];
+            localStorage.setItem('investor_master_db', JSON.stringify(db));
+            updateList();
+            location.reload();
+        }
+    }
 
-        document.getElementById('loader').style.display = 'block';
+    function updateList() {
+        const sel = document.getElementById('savedCompanies');
+        sel.innerHTML = '<option value="">-- Choose Ticker --</option>';
+        Object.keys(db).sort().forEach(t => {
+            let op = document.createElement('option');
+            op.value = t; op.innerHTML = t;
+            sel.appendChild(op);
+        });
+    }
+
+    // --- 2. CLOUD SYNC FUNCTIONS (GITHUB API) ---
+    async function syncToGitHub() {
+        const user = document.getElementById('ghUser').value.trim();
+        const repo = document.getElementById('ghRepo').value.trim();
+        const token = document.getElementById('ghToken').value.trim();
+        const path = 'investor_db.json';
+
+        if (!user || !repo || !token) {
+            return alert("Username, Repository, and Token are required to sync.");
+        }
+
+        const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+        
+        try {
+            let sha = undefined;
+            const getRes = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
+            if (getRes.ok) {
+                const fileData = await getRes.json();
+                sha = fileData.sha;
+            }
+
+            // Encode properly to avoid UTF-8 issues
+            const jsonString = JSON.stringify(db, null, 2);
+            const contentEncoded = btoa(unescape(encodeURIComponent(jsonString)));
+
+            const bodyData = {
+                message: "Auto-sync database from Value Screener App",
+                content: contentEncoded,
+                sha: sha
+            };
+
+            const putRes = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(bodyData)
+            });
+
+            if (putRes.ok) {
+                alert("✅ Database successfully synced to your GitHub Repository!");
+            } else {
+                const errorData = await putRes.json();
+                throw new Error(errorData.message);
+            }
+        } catch (error) {
+            alert(`❌ Sync failed: ${error.message}`);
+        }
+    }
+
+    async function loadFromGitHub() {
+        const user = document.getElementById('ghUser').value.trim();
+        const repo = document.getElementById('ghRepo').value.trim();
+        const token = document.getElementById('ghToken').value.trim();
+        const path = 'investor_db.json';
+
+        if (!user || !repo || !token) {
+            return alert("Username, Repository, and Token are required to fetch data.");
+        }
+
+        const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
 
         try {
-            // Fetching data from Alpha Vantage Official APIs
-            const [quoteRes, incomeRes, balanceRes] = await Promise.all([
-                fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${ticker}&apikey=${apiKey}`),
-                fetch(`https://www.alphavantage.co/query?function=INCOME_STATEMENT&symbol=${ticker}&apikey=${apiKey}`),
-                fetch(`https://www.alphavantage.co/query?function=BALANCE_SHEET&symbol=${ticker}&apikey=${apiKey}`)
-            ]);
+            const getRes = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
+            if (!getRes.ok) throw new Error("File not found or permission denied.");
 
-            const quoteData = await quoteRes.json();
-            const incomeData = await incomeRes.json();
-            const balanceData = await balanceRes.json();
+            const fileData = await getRes.json();
+            
+            // Decode Base64 properly
+            const jsonString = decodeURIComponent(escape(atob(fileData.content)));
+            const importedDb = JSON.parse(jsonString);
 
-            // Alpha Vantage Rate Limit Error Check
-            if (quoteData.Information || incomeData.Information) {
-                throw new Error("API Daily/Minute Rate Limit Reached. Please wait a minute or try again tomorrow.");
-            }
-            if (Object.keys(quoteData['Global Quote'] || {}).length === 0) {
-                throw new Error("Ticker not found.");
-            }
-
-            processMetrics(ticker, quoteData['Global Quote'], incomeData.annualReports, balanceData.annualReports);
+            db = { ...db, ...importedDb }; // Merge databases
+            localStorage.setItem('investor_master_db', JSON.stringify(db));
+            updateList();
+            
+            alert("📥 Database successfully loaded from GitHub!");
 
         } catch (error) {
-            showError(error.message);
-        } finally {
-            document.getElementById('loader').style.display = 'none';
+            alert(`❌ Fetch failed: ${error.message}`);
         }
     }
 
-    function showError(msg) {
-        const errBox = document.getElementById('errorMessage');
-        errBox.innerText = `Error: ${msg}`;
-        errBox.style.display = 'block';
+    // --- 3. EXPORT FUNCTIONS ---
+    function exportJSON() {
+        downloadFile(JSON.stringify(db, null, 2), 'database_backup.json', 'application/json');
     }
 
-    function processMetrics(ticker, quote, incomeHistory, balanceHistory) {
-        if (!incomeHistory || incomeHistory.length < 2) {
-            return showError("Not enough historical data available for this ticker.");
+    function exportTXT() {
+        let txt = "INVESTMENT RESEARCH REPORT\n==========================\n\n";
+        for (let t in db) {
+            txt += `TICKER: ${t}\nPrice: $${db[t].currentPrice}\nREVENUES Y1-Y5: ${db[t].r1} -> ${db[t].r5}\nPROFITS Y1-Y5: ${db[t].ni1} -> ${db[t].ni5}\nDIVIDENDS Y1-Y5: ${db[t].div1} -> ${db[t].div5}\n--------------------------\n\n`;
+        }
+        downloadFile(txt, 'research_report.txt', 'text/plain');
+    }
+
+    function exportCSV() {
+        let csv = "Ticker,Metric,Year 1,Year 2,Year 3,Year 4,Year 5\n";
+        for (let t in db) {
+            csv += `${t},Revenue,${db[t].r1},${db[t].r2},${db[t].r3},${db[t].r4},${db[t].r5}\n`;
+            csv += `${t},Net Income,${db[t].ni1},${db[t].ni2},${db[t].ni3},${db[t].ni4},${db[t].ni5}\n`;
+            csv += `${t},LT Debt,${db[t].d1},${db[t].d2},${db[t].d3},${db[t].d4},${db[t].d5}\n`;
+            csv += `${t},Basic EPS,${db[t].eb1},${db[t].eb2},${db[t].eb3},${db[t].eb4},${db[t].eb5}\n`;
+            csv += `${t},Diluted EPS,${db[t].ed1},${db[t].ed2},${db[t].ed3},${db[t].ed4},${db[t].ed5}\n`;
+            csv += `${t},Dividends,${db[t].div1},${db[t].div2},${db[t].div3},${db[t].div4},${db[t].div5}\n`;
+        }
+        downloadFile(csv, 'financial_data.csv', 'text/csv');
+    }
+
+    function importDatabase(e) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const imported = JSON.parse(ev.target.result);
+            db = {...db, ...imported};
+            localStorage.setItem('investor_master_db', JSON.stringify(db));
+            updateList();
+            alert("Database imported successfully.");
+        };
+        reader.readAsText(e.target.files[0]);
+    }
+
+    function downloadFile(content, name, type) {
+        const blob = new Blob([content], {type: type});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+    }
+
+    // --- 4. ANALYSIS & MATH LOGIC ---
+    function calculateAnalysis() {
+        const get = (id) => parseFloat(document.getElementById(id).value);
+        const p = get('currentPrice');
+        const r1 = get('r1'); const r5 = get('r5');
+        const ni5 = get('ni5'); const d5 = get('d5');
+        const eb5 = get('eb5'); const ed1 = get('ed1'); const ed5 = get('ed5');
+        const div5 = get('div5') || 0; const div1 = get('div1') || 0;
+
+        if (isNaN(p) || isNaN(r1) || isNaN(r5) || isNaN(ed5)) {
+            return alert("Price, Revenue (Y1/Y5), and EPS (Y5) are mandatory.");
         }
 
-        const currentPrice = parseFloat(quote['05. price']);
-        
-        // Ensure we take up to 5 years of data
-        const maxYears = Math.min(incomeHistory.length, 5);
-        const currentIncome = incomeHistory[0]; // Most recent year
-        const oldestIncome = incomeHistory[maxYears - 1]; // Up to 5 years ago
-        const currentBalance = balanceHistory[0];
-
-        const currentRev = parseFloat(currentIncome.totalRevenue);
-        const oldestRev = parseFloat(oldestIncome.totalRevenue);
-        
-        const currentNet = parseFloat(currentIncome.netIncome);
-        const oldestNet = parseFloat(oldestIncome.netIncome);
-
-        const epsBasic = parseFloat(currentIncome.reportedEPS) || 0; // Sometimes missing, default to 0
-        const debt = parseFloat(currentBalance.longTermDebt) || 0;
-
-        document.getElementById('companyTitle').innerText = `${ticker} Analysis`;
-
+        let isProfitable = true;
         let html = '';
-        let isSustainable = true;
 
-        // 1. Current P/E Ratio (Estimate using Net Income and Price, since pure EPS might be absent in standard AV call)
-        // Alternative: P/E is usually calculated via Overview API, but we are saving API calls.
-        let epsEst = epsBasic;
-        let peRatio = 0;
-        
-        if (epsEst > 0) {
-            peRatio = currentPrice / epsEst;
-            const peClass = peRatio > 25 ? 'alert-yellow' : 'alert-green';
-            html += createCard('Current P/E Ratio (Est.)', `${peRatio.toFixed(2)}x`, peClass, `Price: $${currentPrice.toFixed(2)} / EPS: $${epsEst.toFixed(2)}`);
-        } else {
-            html += createCard('Current P/E Ratio', 'N/A / Negative', 'alert-red', 'Negative or missing EPS data.');
-            isSustainable = false;
-        }
+        // 1. P/E Ratio
+        let pe = p / ed5;
+        let peClass = (pe > 25 || pe < 0) ? 'alert-red' : (pe <= 22 ? 'alert-green' : 'alert-yellow');
+        if (pe < 0) isProfitable = false;
+        html += createCard('P/E Ratio', pe.toFixed(2) + 'x', peClass, 'Price to Earnings');
 
-        // 2. Revenue CAGR
-        if (currentRev > 0 && oldestRev > 0) {
-            const timePeriods = maxYears - 1;
-            const revCagr = (Math.pow((currentRev / oldestRev), (1 / timePeriods)) - 1) * 100;
-            const revClass = revCagr <= 0 ? 'alert-red' : (revCagr < 5 ? 'alert-yellow' : 'alert-green');
-            if (revCagr <= 0) isSustainable = false;
-            html += createCard(`${maxYears}-Year Revenue CAGR`, `${revCagr.toFixed(2)}%`, revClass, `From $${(oldestRev/1e9).toFixed(2)}B to $${(currentRev/1e9).toFixed(2)}B`);
-        }
+        // 2. Revenue Growth (CAGR)
+        let revG = (Math.pow(r5/r1, 1/4) - 1) * 100;
+        let revClass = revG >= 5 ? 'alert-green' : (revG > 0 ? 'alert-yellow' : 'alert-red');
+        if (revG <= 0) isProfitable = false;
+        html += createCard('Revenue Growth', revG.toFixed(2) + '%', revClass, '5-Yr Compound Annual Growth');
 
-        // 3. Net Income CAGR
-        if (currentNet > 0 && oldestNet > 0) {
-            const timePeriods = maxYears - 1;
-            const netCagr = (Math.pow((currentNet / oldestNet), (1 / timePeriods)) - 1) * 100;
-            const netClass = netCagr <= 0 ? 'alert-red' : (netCagr < 5 ? 'alert-yellow' : 'alert-green');
-            if (netCagr <= 0) isSustainable = false;
-            html += createCard(`${maxYears}-Year Net Income CAGR`, `${netCagr.toFixed(2)}%`, netClass, `Profit growth trend`);
-        } else {
-            html += createCard('Profit Growth', 'N/A', 'alert-red', 'Negative historical profits restrict calculation.');
-            isSustainable = false;
-        }
+        // 3. EPS Growth (CAGR)
+        let epsG = (Math.pow(ed5/ed1, 1/4) - 1) * 100;
+        let epsClass = epsG >= 5 ? 'alert-green' : (epsG > 0 ? 'alert-yellow' : 'alert-red');
+        if (epsG <= 0 || isNaN(epsG)) isProfitable = false;
+        html += createCard('EPS Growth', (isNaN(epsG) ? 'N/A' : epsG.toFixed(2) + '%'), epsClass, '5-Yr Compound Annual Growth');
 
-        // 4. Net Income Margin
-        if (currentNet && currentRev > 0) {
-            const margin = (currentNet / currentRev) * 100;
-            const marginClass = margin < 0 ? 'alert-red' : (margin < 10 ? 'alert-yellow' : 'alert-green');
-            if (margin < 0) isSustainable = false;
-            html += createCard('Net Income Margin', `${margin.toFixed(2)}%`, marginClass, `Net Income: $${(currentNet/1e9).toFixed(2)}B`);
-        }
+        // 4. Net Margin
+        let margin = (ni5 / r5) * 100;
+        let mClass = margin >= 10 ? 'alert-green' : (margin > 0 ? 'alert-yellow' : 'alert-red');
+        if (margin <= 0) isProfitable = false;
+        html += createCard('Net Income Margin', margin.toFixed(2) + '%', mClass, 'Profitability Efficiency');
 
-        // 5. Debt to Revenue Ratio
-        if (currentRev > 0) {
-            const debtRatio = debt / currentRev;
-            const debtClass = debtRatio > 1.5 ? 'alert-red' : (debtRatio > 0.8 ? 'alert-yellow' : 'alert-green');
-            if (debtRatio > 2.0) isSustainable = false;
-            html += createCard('Debt / Revenue', `${debtRatio.toFixed(2)}x`, debtClass, `Long Term Debt: $${(debt/1e9).toFixed(2)}B`);
-        }
+        // 5. Debt to Revenue
+        let dr = d5 / r5;
+        let drClass = dr > 1.5 ? 'alert-red' : (dr <= 0.8 ? 'alert-green' : 'alert-yellow');
+        if (dr > 2.0) isProfitable = false; 
+        html += createCard('Debt / Revenue', dr.toFixed(2) + 'x', drClass, 'Financial Leverage & Solvency');
+
+        // 6. Share Dilution (Basic vs Diluted)
+        let dil = ((eb5 - ed5) / eb5) * 100;
+        let dClass = dil > 5 ? 'alert-red' : (dil > 2 ? 'alert-yellow' : 'alert-green');
+        html += createCard('Share Dilution', dil.toFixed(2) + '%', dClass, 'Basic vs Diluted EPS gap');
+
+        // 7. Dividend Yield & Growth
+        let divYield = (div5 / p) * 100;
+        let divG = div1 > 0 ? (Math.pow(div5/div1, 1/4) - 1) * 100 : 0;
+        let divClass = divYield > 0 ? 'alert-green' : 'alert-yellow';
+        let divText = divYield > 0 ? `Yield: ${divYield.toFixed(2)}% | 5-Yr Grw: ${divG.toFixed(2)}%` : 'No Dividends Paid';
+        html += createCard('Dividend Profile', `$${div5.toFixed(2)} / share`, divClass, divText);
 
         document.getElementById('metricsGrid').innerHTML = html;
 
-        // --- FINAL VERDICT ---
-        let verdictText = "";
-        let verdictClass = "";
+        // VERDICT LOGIC (3 Variants)
+        let vText = "";
+        let vClass = "";
 
-        if (!isSustainable) {
-            verdictText = "Unsustainable company";
-            verdictClass = "verdict-bad";
+        if (!isProfitable) {
+            vText = "UNPROFITABLE COMPANY"; 
+            vClass = "verdict-bad";
+        } else if (pe <= 22) {
+            vText = "CHEAP AND PROFITABLE COMPANY"; 
+            vClass = "verdict-good";
         } else {
-            if (peRatio > 0 && peRatio <= 25) {
-                verdictText = "Sustainable company at a good price";
-                verdictClass = "verdict-good";
-            } else {
-                verdictText = "Sustainable company at a high price";
-                verdictClass = "verdict-high";
-            }
+            vText = "EXPENSIVE AND PROFITABLE COMPANY"; 
+            vClass = "verdict-high";
         }
 
-        document.getElementById('verdictContainer').innerHTML = `<div class="verdict-box ${verdictClass}">${verdictText}</div>`;
+        document.getElementById('verdictContainer').innerHTML = `<div class="verdict-box ${vClass}">${vText}</div>`;
         document.getElementById('dashboard').style.display = 'block';
     }
 
-    function createCard(title, value, cssClass, subtext) {
-        return `<div class="metric ${cssClass}">
-                    <strong>${title}</strong><br>
-                    <span style="font-size: 26px;">${value}</span><br>
-                    <span class="small-text">${subtext}</span>
-                </div>`;
+    function createCard(title, val, css, sub) {
+        return `<div class="metric ${css}"><strong>${title}</strong><br><span style="font-size: 26px; font-weight: 800;">${val}</span><br><small style="color:#64748b;">${sub}</small></div>`;
     }
+
+    // Init Page
+    window.onload = updateList;
 </script>
 
 </body>
