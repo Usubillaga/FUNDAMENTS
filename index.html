@@ -3,278 +3,169 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SEC Fundamental Analyzer</title>
+    <title>Manual 5-Year Fundamental Analyzer</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; color: #333; padding: 20px; line-height: 1.6; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h1 { color: #1a73e8; text-align: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; }
-        .control-panel { display: grid; grid-template-columns: 1fr 1fr auto; gap: 15px; margin-bottom: 20px; background: #f8f9fa; padding: 20px; border-radius: 8px; }
-        label { font-weight: bold; font-size: 14px; color: #555; display: block; margin-bottom: 5px; }
-        select, input, button { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
-        button { background-color: #1a73e8; color: white; border: none; cursor: pointer; font-weight: bold; transition: background 0.3s; height: 100%; }
-        button:hover { background-color: #1557b0; }
-        .loader { display: none; text-align: center; font-style: italic; color: #666; margin: 20px 0; }
-        .dashboard { display: none; }
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .metric { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e1e4e8; border-left: 5px solid #1a73e8; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; padding: 20px; line-height: 1.6; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1, h2 { color: #2c3e50; text-align: center; }
+        .guide-box { background-color: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 10px; text-align: center; border: 1px solid #dee2e6; }
+        th { background-color: #f8f9fa; color: #495057; }
+        input[type="number"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .price-input { max-width: 300px; margin: 0 auto 20px auto; display: flex; align-items: center; gap: 10px; }
+        button { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        .dashboard { display: none; margin-top: 30px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .metric { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e1e4e8; border-left: 5px solid #007bff; }
         .alert-red { border-left-color: #dc3545; background-color: #fff5f5; }
         .alert-yellow { border-left-color: #ffc107; background-color: #fffdf5; }
         .alert-green { border-left-color: #28a745; background-color: #f4fff5; }
-        .verdict-box { margin-top: 20px; padding: 20px; border-radius: 8px; text-align: center; font-size: 20px; font-weight: bold; color: white; text-transform: uppercase; letter-spacing: 1px; }
+        .verdict-box { padding: 20px; border-radius: 8px; text-align: center; font-size: 22px; font-weight: bold; color: white; text-transform: uppercase; }
         .verdict-good { background-color: #28a745; }
         .verdict-high { background-color: #fd7e14; }
         .verdict-bad { background-color: #dc3545; }
-        .small-text { font-size: 12px; color: #666; margin-top: 5px; display: block; }
-        .error-message { color: #dc3545; text-align: center; font-weight: bold; margin-top: 20px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>SEC Fundamentals & Valuation Analyzer</h1>
+    <h1>5-Year Manual Fundamental Analyzer</h1>
     
-    <div class="control-panel">
-        <div>
-            <label for="stockSelect">Select Company:</label>
-            <select id="stockSelect"></select>
-        </div>
-        <div>
-            <label for="manualPrice">Current Stock Price ($):</label>
-            <input type="number" id="manualPrice" placeholder="e.g. 150.50" step="0.01" min="0.01" required>
-        </div>
-        <div>
-            <label>&nbsp;</label>
-            <button onclick="runAnalysis()">Run Analysis</button>
-        </div>
+    <div class="guide-box">
+        <strong>💡 How to input data:</strong> Find the "Consolidated Statements of Income" and "Balance Sheets" in the company's 10-K. Input numbers consistently (e.g., if Revenue is 383,285 in millions, just type 383285 for all currency fields). EPS must be the exact dollar amount (e.g., 6.15). Year 5 is the most recent year.
     </div>
-    
-    <div id="loader" class="loader">Fetching financial data from SEC EDGAR... Please wait.</div>
-    <div id="errorMessage" class="error-message"></div>
-    
+
+    <div class="price-input">
+        <label><strong>Current Stock Price ($):</strong></label>
+        <input type="number" id="currentPrice" placeholder="e.g. 150.00" step="0.01">
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th>Year 1 (Oldest)</th>
+                <th>Year 2</th>
+                <th>Year 3</th>
+                <th>Year 4</th>
+                <th>Year 5 (Current)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Revenue</strong><br><small>(Top line)</small></td>
+                <td><input type="number" id="r1"></td><td><input type="number" id="r2"></td><td><input type="number" id="r3"></td><td><input type="number" id="r4"></td><td><input type="number" id="r5"></td>
+            </tr>
+            <tr>
+                <td><strong>Net Income</strong><br><small>(Bottom line profit)</small></td>
+                <td><input type="number" id="ni1"></td><td><input type="number" id="ni2"></td><td><input type="number" id="ni3"></td><td><input type="number" id="ni4"></td><td><input type="number" id="ni5"></td>
+            </tr>
+            <tr>
+                <td><strong>Long-Term Debt</strong><br><small>(Balance Sheet Liability)</small></td>
+                <td><input type="number" id="d1"></td><td><input type="number" id="d2"></td><td><input type="number" id="d3"></td><td><input type="number" id="d4"></td><td><input type="number" id="d5"></td>
+            </tr>
+            <tr>
+                <td><strong>Basic EPS ($)</strong></td>
+                <td><input type="number" id="eb1" step="0.01"></td><td><input type="number" id="eb2" step="0.01"></td><td><input type="number" id="eb3" step="0.01"></td><td><input type="number" id="eb4" step="0.01"></td><td><input type="number" id="eb5" step="0.01"></td>
+            </tr>
+            <tr>
+                <td><strong>Diluted EPS ($)</strong></td>
+                <td><input type="number" id="ed1" step="0.01"></td><td><input type="number" id="ed2" step="0.01"></td><td><input type="number" id="ed3" step="0.01"></td><td><input type="number" id="ed4" step="0.01"></td><td><input type="number" id="ed5" step="0.01"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <button onclick="calculateMetrics()">Analyze 5-Year Fundamentals</button>
+
     <div id="dashboard" class="dashboard">
-        <h2 id="companyTitle"></h2>
+        <h2>Analysis Results</h2>
         <div class="metrics-grid" id="metricsGrid"></div>
         <div id="verdictContainer"></div>
     </div>
 </div>
 
 <script>
-    // --- 1. EXPANDED STOCK REPOSITORY ---
-    const stockRepository = {
-        "DOW JONES (All 30)": [
-            { ticker: "AAPL", name: "Apple Inc." }, { ticker: "AMGN", name: "Amgen" }, { ticker: "AXP", name: "American Express" },
-            { ticker: "BA", name: "Boeing" }, { ticker: "CAT", name: "Caterpillar" }, { ticker: "CRM", name: "Salesforce" },
-            { ticker: "CSCO", name: "Cisco Systems" }, { ticker: "CVX", name: "Chevron" }, { ticker: "DIS", name: "Walt Disney" },
-            { ticker: "DOW", name: "Dow Inc." }, { ticker: "GS", name: "Goldman Sachs" }, { ticker: "HD", name: "Home Depot" },
-            { ticker: "HON", name: "Honeywell" }, { ticker: "IBM", name: "IBM" }, { ticker: "INTC", name: "Intel" },
-            { ticker: "JNJ", name: "Johnson & Johnson" }, { ticker: "JPM", name: "JPMorgan Chase" }, { ticker: "KO", name: "Coca-Cola" },
-            { ticker: "MCD", name: "McDonald's" }, { ticker: "MMM", name: "3M" }, { ticker: "MRK", name: "Merck & Co." },
-            { ticker: "MSFT", name: "Microsoft" }, { ticker: "NKE", name: "Nike" }, { ticker: "PG", name: "Procter & Gamble" },
-            { ticker: "TRV", name: "Travelers" }, { ticker: "UNH", name: "UnitedHealth" }, { ticker: "V", name: "Visa" },
-            { ticker: "VZ", name: "Verizon" }, { ticker: "WBA", name: "Walgreens Boots" }, { ticker: "WMT", name: "Walmart" }
-        ],
-        "S&P 500 (Top Selection)": [
-            { ticker: "NVDA", name: "NVIDIA Corp." }, { ticker: "GOOGL", name: "Alphabet Inc." }, { ticker: "AMZN", name: "Amazon" },
-            { ticker: "META", name: "Meta Platforms" }, { ticker: "TSLA", name: "Tesla, Inc." }, { ticker: "BRK-B", name: "Berkshire Hathaway" },
-            { ticker: "LLY", name: "Eli Lilly" }, { ticker: "AVGO", name: "Broadcom" }, { ticker: "COST", name: "Costco" },
-            { ticker: "ABBV", name: "AbbVie" }, { ticker: "PEP", name: "PepsiCo" }, { ticker: "TMO", name: "Thermo Fisher" },
-            { ticker: "NFLX", name: "Netflix" }, { ticker: "ADBE", name: "Adobe" }, { ticker: "AMD", name: "AMD" }
-        ],
-        "NASDAQ 100 (Top Selection)": [
-            { ticker: "QCOM", name: "Qualcomm" }, { ticker: "TXN", name: "Texas Instruments" }, { ticker: "AMAT", name: "Applied Materials" },
-            { ticker: "INTU", name: "Intuit" }, { ticker: "ISRG", name: "Intuitive Surgical" }, { ticker: "BKNG", name: "Booking Holdings" },
-            { ticker: "SBUX", name: "Starbucks" }, { ticker: "GILD", name: "Gilead Sciences" }, { ticker: "MDLZ", name: "Mondelez" }
-        ],
-        "DAX - GERMANY (US ADRs)": [
-            { ticker: "SAP", name: "SAP SE" }, { ticker: "SIEGY", name: "Siemens AG" }, { ticker: "DTEGY", name: "Deutsche Telekom" },
-            { ticker: "ALIZY", name: "Allianz SE" }, { ticker: "BMWYY", name: "BMW AG" }, { ticker: "MBGYY", name: "Mercedes-Benz" },
-            { ticker: "POAHY", name: "Porsche SE" }, { ticker: "BAYRY", name: "Bayer AG" }, { ticker: "VWAGY", name: "Volkswagen AG" }
-        ],
-        "CHINA (US ADRs)": [
-            { ticker: "BABA", name: "Alibaba Group" }, { ticker: "JD", name: "JD.com" }, { ticker: "PDD", name: "PDD Holdings" },
-            { ticker: "BIDU", name: "Baidu" }, { ticker: "NTES", name: "NetEase" }, { ticker: "NIO", name: "NIO Inc." },
-            { ticker: "XPEV", name: "XPeng" }, { ticker: "LI", name: "Li Auto" }, { ticker: "TCOM", name: "Trip.com" }
-        ]
-    };
+    function calculateMetrics() {
+        // Fetch Current Price
+        const price = parseFloat(document.getElementById('currentPrice').value);
+        if (!price || price <= 0) return alert("Please enter a valid current stock price.");
 
-    window.onload = () => {
-        const select = document.getElementById('stockSelect');
-        for (const [category, stocks] of Object.entries(stockRepository)) {
-            const optgroup = document.createElement('optgroup');
-            optgroup.label = category;
-            stocks.forEach(stock => {
-                const option = document.createElement('option');
-                option.value = stock.ticker;
-                option.textContent = `${stock.ticker} - ${stock.name}`;
-                optgroup.appendChild(option);
-            });
-            select.appendChild(optgroup);
+        // Fetch Year 1 (Oldest) and Year 5 (Current) for Growth calculations
+        const r1 = parseFloat(document.getElementById('r1').value);
+        const r5 = parseFloat(document.getElementById('r5').value);
+        const ni5 = parseFloat(document.getElementById('ni5').value);
+        const d5 = parseFloat(document.getElementById('d5').value);
+        const eb5 = parseFloat(document.getElementById('eb5').value);
+        const ed5 = parseFloat(document.getElementById('ed5').value);
+        const ed1 = parseFloat(document.getElementById('ed1').value);
+
+        // Validation to ensure at least Year 1 and Year 5 are filled
+        if (isNaN(r1) || isNaN(r5) || isNaN(ed5)) {
+            return alert("Please fill out at least Year 1 and Year 5 (Current) data completely to run the analysis.");
         }
-    };
-
-    const CORS_PROXY = "https://corsproxy.io/?"; 
-
-    // --- 2. MAIN EXECUTION WITH SAFE ERROR HANDLING ---
-    async function runAnalysis() {
-        const ticker = document.getElementById('stockSelect').value;
-        const currentPrice = parseFloat(document.getElementById('manualPrice').value);
-        const errBox = document.getElementById('errorMessage');
-
-        errBox.style.display = 'none';
-
-        if (!currentPrice || currentPrice <= 0) {
-            showError("Please enter a valid current stock price.");
-            return;
-        }
-
-        document.getElementById('loader').style.display = 'block';
-        document.getElementById('dashboard').style.display = 'none';
-        document.getElementById('metricsGrid').innerHTML = '';
-        document.getElementById('verdictContainer').innerHTML = '';
-
-        try {
-            // Get CIK
-            const urlTickers = `${CORS_PROXY}https://www.sec.gov/files/company_tickers.json`;
-            const resTickers = await fetch(urlTickers);
-            const dataTickers = await resTickers.json();
-            
-            let cik = null;
-            let companyName = "";
-            
-            // Handle Berkshire Hathaway's weird ticker formatting in SEC database
-            const secTickerSearch = ticker === "BRK-B" ? "BRK-B" : ticker;
-
-            for (let key in dataTickers) {
-                if (dataTickers[key].ticker === secTickerSearch) {
-                    cik = String(dataTickers[key].cik_str).padStart(10, '0');
-                    companyName = dataTickers[key].title;
-                    break;
-                }
-            }
-
-            if (!cik) throw new Error(`Ticker ${ticker} not found in SEC EDGAR database.`);
-
-            // Get Company Facts
-            const urlFacts = `${CORS_PROXY}https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`;
-            const resFacts = await fetch(urlFacts);
-            const dataFacts = await resFacts.json();
-
-            // Safe property checking to prevent "Cannot read properties of undefined (reading 'us-gaap')"
-            if (!dataFacts || !dataFacts.facts) {
-                throw new Error("The SEC returned an empty or invalid dataset for this company.");
-            }
-
-            const facts = dataFacts.facts;
-            const accountingStandard = facts['us-gaap'] || facts['ifrs-full'];
-            
-            if (!accountingStandard) {
-                throw new Error(`No US-GAAP or IFRS accounting tags found for ${ticker}. The company might file using non-standard XBRL tags or relies on OTC exemptions.`);
-            }
-
-            processMetrics(ticker, companyName, accountingStandard, currentPrice);
-
-        } catch (error) {
-            console.error(error);
-            showError(error.message);
-        } finally {
-            document.getElementById('loader').style.display = 'none';
-        }
-    }
-
-    function showError(message) {
-        const errBox = document.getElementById('errorMessage');
-        errBox.innerText = `Error: ${message}`;
-        errBox.style.display = 'block';
-    }
-
-    // --- 3. ROBUST DATA PROCESSING & MATH ---
-    function processMetrics(ticker, companyName, data, price) {
-        document.getElementById('companyTitle').innerText = `${companyName} (${ticker}) Analysis`;
-
-        // Hardened helper function to extract values without crashing
-        const getValue = (tags, yearsBack = 0, isPerShare = false) => {
-            for (let tag of tags) {
-                if (data[tag] && data[tag].units) {
-                    const unitKey = isPerShare ? 'USD/shares' : 'USD';
-                    if (data[tag].units[unitKey]) {
-                        // SEC uses CY2023 for annual reports (length 6)
-                        const annuals = data[tag].units[unitKey].filter(r => r.frame && r.frame.length === 6); 
-                        if (annuals.length > yearsBack) {
-                            return annuals[annuals.length - 1 - yearsBack].val;
-                        }
-                    }
-                }
-            }
-            return null; // Return null safely if nothing is found
-        };
-
-        const revNow = getValue(['Revenues', 'SalesRevenueNet', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenue', 'RevenuesNetOfInterestExpense'], 0);
-        const revPast = getValue(['Revenues', 'SalesRevenueNet', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenue', 'RevenuesNetOfInterestExpense'], 1);
-        const netIncome = getValue(['NetIncomeLoss', 'ProfitLoss'], 0);
-        const debt = getValue(['LongTermDebt', 'LongTermDebtNoncurrent', 'DebtInstrumentCarryingAmount'], 0) || 0; 
-        
-        const epsDiluted = getValue(['EarningsPerShareDiluted', 'BasicAndDilutedEarningsPerShare'], 0, true);
-        const epsBasic = getValue(['EarningsPerShareBasic', 'BasicAndDilutedEarningsPerShare'], 0, true);
-        const epsPast = getValue(['EarningsPerShareDiluted', 'BasicAndDilutedEarningsPerShare'], 1, true);
 
         let html = '';
         let isSustainable = true;
 
-        // 1. P/E Ratio
+        // 1. Current P/E Ratio
         let peRatio = 0;
-        if (epsDiluted && epsDiluted > 0) {
-            peRatio = price / epsDiluted;
+        if (ed5 > 0) {
+            peRatio = price / ed5;
             const peClass = peRatio > 25 ? 'alert-yellow' : 'alert-green';
-            html += createCard('P/E Ratio', `${peRatio.toFixed(2)}x`, peClass, `Price: $${price} / EPS: $${epsDiluted}`);
+            html += createCard('Current P/E Ratio', `${peRatio.toFixed(2)}x`, peClass, `Based on Current Diluted EPS of $${ed5}`);
         } else {
-            html += createCard('P/E Ratio', 'N/A or Negative', 'alert-red', 'Company has negative or missing EPS.');
+            html += createCard('Current P/E Ratio', 'Negative', 'alert-red', 'Company is losing money currently.');
             isSustainable = false;
         }
 
-        // 2. Revenue Growth (YoY)
-        if (revNow !== null && revPast !== null) {
-            const revGrowth = ((revNow - revPast) / revPast) * 100;
-            const revClass = revGrowth < 0 ? 'alert-red' : 'alert-green';
-            if (revGrowth < 0) isSustainable = false;
-            html += createCard('Revenue Growth (YoY)', `${revGrowth.toFixed(2)}%`, revClass, `Current: $${(revNow/1e9).toFixed(2)}B | Prev: $${(revPast/1e9).toFixed(2)}B`);
+        // 2. 5-Year Revenue Growth (CAGR)
+        if (r1 > 0 && r5 > 0) {
+            // Formula: (Ending Value / Beginning Value)^(1/Years) - 1. We have 5 data points, so 4 years of growth.
+            const revCagr = (Math.pow((r5 / r1), (1 / 4)) - 1) * 100;
+            const revClass = revCagr <= 0 ? 'alert-red' : (revCagr < 5 ? 'alert-yellow' : 'alert-green');
+            if (revCagr <= 0) isSustainable = false;
+            html += createCard('5-Year Revenue CAGR', `${revCagr.toFixed(2)}%`, revClass, `Annualized growth rate from Year 1 to Year 5.`);
+        }
+
+        // 3. 5-Year EPS Growth (CAGR)
+        if (ed1 > 0 && ed5 > 0) {
+            const epsCagr = (Math.pow((ed5 / ed1), (1 / 4)) - 1) * 100;
+            const epsClass = epsCagr <= 0 ? 'alert-red' : (epsCagr < 5 ? 'alert-yellow' : 'alert-green');
+            if (epsCagr <= 0) isSustainable = false;
+            html += createCard('5-Year EPS CAGR', `${epsCagr.toFixed(2)}%`, epsClass, `Profitability growth rate from Year 1 to Year 5.`);
         } else {
-            html += createCard('Revenue Growth', 'Missing Data', 'alert-yellow', 'Revenue tags not found.');
+            html += createCard('5-Year EPS CAGR', 'N/A', 'alert-red', 'Negative earnings complicate compound growth calculations.');
+            isSustainable = false;
         }
 
-        // 3. EPS Growth (YoY)
-        if (epsDiluted !== null && epsPast !== null && epsPast !== 0) {
-            const epsGrowth = ((epsDiluted - epsPast) / Math.abs(epsPast)) * 100;
-            const epsClass = epsGrowth < 0 ? 'alert-red' : 'alert-green';
-            if (epsGrowth < 0) isSustainable = false;
-            html += createCard('EPS Growth (YoY)', `${epsGrowth.toFixed(2)}%`, epsClass, `Current: $${epsDiluted} | Prev: $${epsPast}`);
-        }
-
-        // 4. Net Income Margin
-        if (netIncome !== null && revNow !== null && revNow > 0) {
-            const margin = (netIncome / revNow) * 100;
+        // 4. Current Net Income Margin
+        if (ni5 && r5 > 0) {
+            const margin = (ni5 / r5) * 100;
             const marginClass = margin < 0 ? 'alert-red' : (margin < 10 ? 'alert-yellow' : 'alert-green');
             if (margin < 0) isSustainable = false;
-            html += createCard('Net Income Margin', `${margin.toFixed(2)}%`, marginClass, `Net Income: $${(netIncome/1e9).toFixed(2)}B`);
+            html += createCard('Current Net Margin', `${margin.toFixed(2)}%`, marginClass, `How much of current revenue becomes pure profit.`);
         }
 
         // 5. Debt to Revenue Ratio
-        if (revNow !== null && revNow > 0) {
-            const debtRatio = debt / revNow;
+        if (!isNaN(d5) && r5 > 0) {
+            const debtRatio = d5 / r5;
             const debtClass = debtRatio > 1.5 ? 'alert-red' : (debtRatio > 0.8 ? 'alert-yellow' : 'alert-green');
             if (debtRatio > 2.0) isSustainable = false;
-            html += createCard('Debt / Revenue', `${debtRatio.toFixed(2)}x`, debtClass, `Long Term Debt: $${(debt/1e9).toFixed(2)}B`);
+            html += createCard('Current Debt / Revenue', `${debtRatio.toFixed(2)}x`, debtClass, `Current Long Term Debt vs Current Revenue.`);
         }
 
-        // 6. Share Dilution
-        if (epsBasic !== null && epsDiluted !== null && epsBasic > 0) {
-            const dilution = ((epsBasic - epsDiluted) / epsBasic) * 100;
+        // 6. Current Share Dilution
+        if (eb5 && ed5 && eb5 > 0) {
+            const dilution = ((eb5 - ed5) / eb5) * 100;
             const dilClass = dilution > 5 ? 'alert-yellow' : 'alert-green';
-            html += createCard('Share Dilution', `${dilution.toFixed(2)}%`, dilClass, `Basic: $${epsBasic} | Diluted: $${epsDiluted}`);
+            html += createCard('Current Share Dilution', `${dilution.toFixed(2)}%`, dilClass, `Difference between Basic and Diluted EPS.`);
         }
 
         document.getElementById('metricsGrid').innerHTML = html;
 
-        // --- 4. FINAL VERDICT ---
+        // FINAL VERDICT
         let verdictText = "";
         let verdictClass = "";
 
@@ -298,8 +189,8 @@
     function createCard(title, value, cssClass, subtext) {
         return `<div class="metric ${cssClass}">
                     <strong>${title}</strong><br>
-                    <span style="font-size: 24px;">${value}</span>
-                    <span class="small-text">${subtext}</span>
+                    <span style="font-size: 26px;">${value}</span><br>
+                    <span style="font-size: 13px; color: #666;">${subtext}</span>
                 </div>`;
     }
 </script>
