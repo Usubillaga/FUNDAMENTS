@@ -3,23 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Automated 5-Year Fundamental Analyzer (FMP)</title>
+    <title>Automated Fundamental Analyzer (Yahoo Finance API)</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; padding: 20px; line-height: 1.6; }
         .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; }
-        .control-panel { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        .input-group { display: flex; gap: 15px; margin-bottom: 15px; }
-        .input-group > div { flex: 1; }
-        label { font-weight: bold; font-size: 14px; color: #555; display: block; margin-bottom: 5px; }
-        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
-        #ticker { text-transform: uppercase; }
-        button { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.3s; }
-        button:hover { background-color: #0056b3; }
+        .control-panel { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; text-align: center; }
+        label { font-weight: bold; font-size: 16px; color: #555; display: block; margin-bottom: 10px; }
+        input { width: 60%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; text-transform: uppercase; margin-bottom: 15px; }
+        button { width: 60%; padding: 15px; background-color: #7209b7; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.3s; }
+        button:hover { background-color: #560bad; }
         .loader { display: none; text-align: center; font-style: italic; color: #666; margin: 20px 0; font-weight: bold; }
         .dashboard { display: none; margin-top: 30px; }
         .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        .metric { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e1e4e8; border-left: 5px solid #007bff; }
+        .metric { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e1e4e8; border-left: 5px solid #7209b7; }
         .alert-red { border-left-color: #dc3545; background-color: #fff5f5; }
         .alert-yellow { border-left-color: #ffc107; background-color: #fffdf5; }
         .alert-green { border-left-color: #28a745; background-color: #f4fff5; }
@@ -35,23 +32,17 @@
 
 <div class="container">
     <h1>Automated Fundamental Analyzer</h1>
+    <p style="text-align: center; color: #666;">Powered by Yahoo Finance (No API Key Required | Unlimited Scans)</p>
     
     <div class="control-panel">
-        <div class="input-group">
-            <div>
-                <label for="apiKey">FMP API Key (Stored locally):</label>
-                <input type="password" id="apiKey" placeholder="Paste your free API key here">
-            </div>
-            <div>
-                <label for="ticker">Stock Ticker:</label>
-                <input type="text" id="ticker" placeholder="e.g. AAPL, MSFT, SAP">
-            </div>
-        </div>
-        <button onclick="fetchData()">Run Full Analysis</button>
+        <label for="ticker">Enter Stock Ticker:</label>
+        <input type="text" id="ticker" placeholder="e.g. AAPL, MSFT, TSLA">
+        <br>
+        <button onclick="fetchData()">Run Analysis</button>
         <div id="errorMessage" class="error"></div>
     </div>
     
-    <div id="loader" class="loader">Downloading 5-year financials and calculating metrics...</div>
+    <div id="loader" class="loader">Extracting financial data from Yahoo Finance servers...</div>
     
     <div id="dashboard" class="dashboard">
         <h2 id="companyTitle" style="text-align: center; color: #2c3e50;"></h2>
@@ -61,36 +52,30 @@
 </div>
 
 <script>
+    // We use AllOrigins as a reliable public proxy to bypass CORS restrictions in the browser
+    const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+
     async function fetchData() {
-        const apiKey = document.getElementById('apiKey').value.trim();
         const ticker = document.getElementById('ticker').value.trim().toUpperCase();
         const errBox = document.getElementById('errorMessage');
 
         errBox.style.display = 'none';
         document.getElementById('dashboard').style.display = 'none';
 
-        if (!apiKey) return showError("Please enter your FMP API Key.");
         if (!ticker) return showError("Please enter a stock ticker.");
-
         document.getElementById('loader').style.display = 'block';
 
         try {
-            // Fetch 3 endpoints simultaneously for speed: Price, Income Statement (5 yrs), Balance Sheet (1 yr)
-            const [quoteRes, incomeRes, balanceRes] = await Promise.all([
-                fetch(`https://financialmodelingprep.com/api/v3/quote/${ticker}?apikey=${apiKey}`),
-                fetch(`https://financialmodelingprep.com/api/v3/income-statement/${ticker}?limit=5&apikey=${apiKey}`),
-                fetch(`https://financialmodelingprep.com/api/v3/balance-sheet-statement/${ticker}?limit=1&apikey=${apiKey}`)
-            ]);
+            // Fetching hidden Yahoo Finance API endpoints
+            const targetUrl = `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${ticker}?modules=financialData,defaultKeyStatistics,summaryDetail,incomeStatementHistory,balanceSheetHistory`;
+            const res = await fetch(`${CORS_PROXY}${encodeURIComponent(targetUrl)}`);
+            const data = await res.json();
 
-            const quoteData = await quoteRes.json();
-            const incomeData = await incomeRes.json();
-            const balanceData = await balanceRes.json();
+            if (!data.quoteSummary || !data.quoteSummary.result) {
+                throw new Error("Ticker not found or financial data unavailable on Yahoo Finance.");
+            }
 
-            // Error handling for bad API keys or invalid tickers
-            if (incomeData['Error Message']) throw new Error("Invalid API Key or API limit reached.");
-            if (quoteData.length === 0 || incomeData.length === 0) throw new Error("Ticker not found or no financial data available.");
-
-            processMetrics(ticker, quoteData[0], incomeData, balanceData[0]);
+            processMetrics(ticker, data.quoteSummary.result[0]);
 
         } catch (error) {
             showError(error.message);
@@ -105,75 +90,85 @@
         errBox.style.display = 'block';
     }
 
-    function processMetrics(ticker, quote, incomeHistory, currentBalance) {
-        const companyName = quote.name;
-        const currentPrice = quote.price;
-        
-        // FMP returns data from newest (index 0) to oldest
-        const currentIncome = incomeHistory[0];
-        const oldestIncome = incomeHistory[incomeHistory.length - 1]; // Up to 5 years ago
-        const yearsOfData = incomeHistory.length;
+    function processMetrics(ticker, result) {
+        // Helper to safely extract Yahoo's weird nested JSON format
+        const safeRaw = (obj) => obj && obj.raw !== undefined ? obj.raw : null;
 
-        document.getElementById('companyTitle').innerText = `${companyName} (${ticker}) Analysis`;
+        const currentPrice = safeRaw(result.financialData.currentPrice);
+        const eps = safeRaw(result.defaultKeyStatistics.trailingEps);
+        const sharesOut = safeRaw(result.defaultKeyStatistics.sharesOutstanding);
+        
+        // Income History (Array where index 0 is the most recent year)
+        const incomeHistory = result.incomeStatementHistory?.incomeStatementHistory || [];
+        const balanceHistory = result.balanceSheetHistory?.balanceSheetStatements || [];
+
+        if (incomeHistory.length < 2) {
+            return showError("Not enough historical financial data to calculate trends.");
+        }
+
+        const yearsOfData = incomeHistory.length; // Usually 4 years on Yahoo
+        const currentIncome = incomeHistory[0];
+        const oldestIncome = incomeHistory[incomeHistory.length - 1];
+
+        const currentRev = safeRaw(currentIncome.totalRevenue);
+        const oldestRev = safeRaw(oldestIncome.totalRevenue);
+        
+        const currentNet = safeRaw(currentIncome.netIncome);
+        const oldestNet = safeRaw(oldestIncome.netIncome);
+
+        // Debt (If undefined, assume 0)
+        const currentDebt = balanceHistory.length > 0 ? (safeRaw(balanceHistory[0].longTermDebt) || 0) : 0;
+
+        document.getElementById('companyTitle').innerText = `${ticker} Analysis`;
 
         let html = '';
         let isSustainable = true;
 
         // 1. Current P/E Ratio
-        let peRatio = 0;
-        if (currentIncome.epsdiluted > 0) {
-            peRatio = currentPrice / currentIncome.epsdiluted;
+        let peRatio = safeRaw(result.summaryDetail?.trailingPE) || (currentPrice && eps > 0 ? currentPrice / eps : 0);
+        if (peRatio > 0) {
             const peClass = peRatio > 25 ? 'alert-yellow' : 'alert-green';
-            html += createCard('Current P/E Ratio', `${peRatio.toFixed(2)}x`, peClass, `Price: $${currentPrice.toFixed(2)} / EPS: $${currentIncome.epsdiluted.toFixed(2)}`);
+            html += createCard('Current P/E Ratio', `${peRatio.toFixed(2)}x`, peClass, `Price: $${currentPrice.toFixed(2)} / EPS: $${eps.toFixed(2)}`);
         } else {
             html += createCard('Current P/E Ratio', 'Negative', 'alert-red', 'Company is currently losing money.');
             isSustainable = false;
         }
 
-        // 2. Revenue CAGR (Compound Annual Growth Rate)
-        if (yearsOfData > 1 && oldestIncome.revenue > 0) {
-            const timePeriods = yearsOfData - 1; 
-            const revCagr = (Math.pow((currentIncome.revenue / oldestIncome.revenue), (1 / timePeriods)) - 1) * 100;
+        // 2. Revenue CAGR (Growth)
+        if (currentRev > 0 && oldestRev > 0) {
+            const timePeriods = yearsOfData - 1; // 4 data points = 3 growth periods
+            const revCagr = (Math.pow((currentRev / oldestRev), (1 / timePeriods)) - 1) * 100;
             const revClass = revCagr <= 0 ? 'alert-red' : (revCagr < 5 ? 'alert-yellow' : 'alert-green');
             if (revCagr <= 0) isSustainable = false;
-            html += createCard(`${yearsOfData}-Year Revenue CAGR`, `${revCagr.toFixed(2)}%`, revClass, `From $${(oldestIncome.revenue/1e9).toFixed(2)}B to $${(currentIncome.revenue/1e9).toFixed(2)}B`);
-        } else {
-            html += createCard('Revenue Growth', 'N/A', 'alert-yellow', 'Not enough historical data.');
+            html += createCard(`${yearsOfData}-Year Revenue CAGR`, `${revCagr.toFixed(2)}%`, revClass, `From $${(oldestRev/1e9).toFixed(2)}B to $${(currentRev/1e9).toFixed(2)}B`);
         }
 
-        // 3. EPS CAGR
-        if (yearsOfData > 1 && oldestIncome.epsdiluted > 0 && currentIncome.epsdiluted > 0) {
+        // 3. Net Income CAGR (Used as a proxy for EPS growth since Yahoo hides historical EPS)
+        if (currentNet > 0 && oldestNet > 0) {
             const timePeriods = yearsOfData - 1;
-            const epsCagr = (Math.pow((currentIncome.epsdiluted / oldestIncome.epsdiluted), (1 / timePeriods)) - 1) * 100;
-            const epsClass = epsCagr <= 0 ? 'alert-red' : (epsCagr < 5 ? 'alert-yellow' : 'alert-green');
-            if (epsCagr <= 0) isSustainable = false;
-            html += createCard(`${yearsOfData}-Year EPS CAGR`, `${epsCagr.toFixed(2)}%`, epsClass, `From $${oldestIncome.epsdiluted.toFixed(2)} to $${currentIncome.epsdiluted.toFixed(2)}`);
+            const netCagr = (Math.pow((currentNet / oldestNet), (1 / timePeriods)) - 1) * 100;
+            const netClass = netCagr <= 0 ? 'alert-red' : (netCagr < 5 ? 'alert-yellow' : 'alert-green');
+            if (netCagr <= 0) isSustainable = false;
+            html += createCard(`${yearsOfData}-Year Profit Growth`, `${netCagr.toFixed(2)}%`, netClass, `Net Income CAGR`);
         } else {
-            html += createCard('EPS Growth', 'N/A', 'alert-yellow', 'Negative earnings prevent CAGR calculation.');
+            html += createCard('Profit Growth', 'Negative/NA', 'alert-red', 'Historical profits were negative.');
             isSustainable = false;
         }
 
         // 4. Net Income Margin
-        if (currentIncome.netIncome && currentIncome.revenue > 0) {
-            const margin = (currentIncome.netIncome / currentIncome.revenue) * 100;
+        if (currentNet && currentRev > 0) {
+            const margin = (currentNet / currentRev) * 100;
             const marginClass = margin < 0 ? 'alert-red' : (margin < 10 ? 'alert-yellow' : 'alert-green');
             if (margin < 0) isSustainable = false;
-            html += createCard('Net Income Margin', `${margin.toFixed(2)}%`, marginClass, `Net Income: $${(currentIncome.netIncome/1e9).toFixed(2)}B`);
+            html += createCard('Net Income Margin', `${margin.toFixed(2)}%`, marginClass, `Net Income: $${(currentNet/1e9).toFixed(2)}B`);
         }
 
         // 5. Debt to Revenue Ratio
-        if (currentBalance && currentBalance.longTermDebt !== undefined && currentIncome.revenue > 0) {
-            const debtRatio = currentBalance.longTermDebt / currentIncome.revenue;
+        if (currentRev > 0) {
+            const debtRatio = currentDebt / currentRev;
             const debtClass = debtRatio > 1.5 ? 'alert-red' : (debtRatio > 0.8 ? 'alert-yellow' : 'alert-green');
             if (debtRatio > 2.0) isSustainable = false;
-            html += createCard('Debt / Revenue', `${debtRatio.toFixed(2)}x`, debtClass, `Long Term Debt: $${(currentBalance.longTermDebt/1e9).toFixed(2)}B`);
-        }
-
-        // 6. Share Dilution (Current Year)
-        if (currentIncome.eps && currentIncome.epsdiluted && currentIncome.eps > 0) {
-            const dilution = ((currentIncome.eps - currentIncome.epsdiluted) / currentIncome.eps) * 100;
-            const dilClass = dilution > 5 ? 'alert-yellow' : 'alert-green';
-            html += createCard('Current Share Dilution', `${dilution.toFixed(2)}%`, dilClass, `Basic: $${currentIncome.eps.toFixed(2)} | Diluted: $${currentIncome.epsdiluted.toFixed(2)}`);
+            html += createCard('Debt / Revenue', `${debtRatio.toFixed(2)}x`, debtClass, `Long Term Debt: $${(currentDebt/1e9).toFixed(2)}B`);
         }
 
         document.getElementById('metricsGrid').innerHTML = html;
