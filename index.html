@@ -3,169 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manual 5-Year Fundamental Analyzer</title>
+    <title>Automated 5-Year Fundamental Analyzer (FMP)</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333; padding: 20px; line-height: 1.6; }
-        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-        h1, h2 { color: #2c3e50; text-align: center; }
-        .guide-box { background-color: #e9ecef; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { padding: 10px; text-align: center; border: 1px solid #dee2e6; }
-        th { background-color: #f8f9fa; color: #495057; }
-        input[type="number"] { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        .price-input { max-width: 300px; margin: 0 auto 20px auto; display: flex; align-items: center; gap: 10px; }
-        button { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; text-align: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; }
+        .control-panel { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .input-group { display: flex; gap: 15px; margin-bottom: 15px; }
+        .input-group > div { flex: 1; }
+        label { font-weight: bold; font-size: 14px; color: #555; display: block; margin-bottom: 5px; }
+        input { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
+        #ticker { text-transform: uppercase; }
+        button { width: 100%; padding: 15px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 18px; font-weight: bold; transition: 0.3s; }
         button:hover { background-color: #0056b3; }
+        .loader { display: none; text-align: center; font-style: italic; color: #666; margin: 20px 0; font-weight: bold; }
         .dashboard { display: none; margin-top: 30px; }
-        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .metric { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e1e4e8; border-left: 5px solid #007bff; }
         .alert-red { border-left-color: #dc3545; background-color: #fff5f5; }
         .alert-yellow { border-left-color: #ffc107; background-color: #fffdf5; }
         .alert-green { border-left-color: #28a745; background-color: #f4fff5; }
-        .verdict-box { padding: 20px; border-radius: 8px; text-align: center; font-size: 22px; font-weight: bold; color: white; text-transform: uppercase; }
+        .verdict-box { padding: 20px; border-radius: 8px; text-align: center; font-size: 22px; font-weight: bold; color: white; text-transform: uppercase; letter-spacing: 1px; }
         .verdict-good { background-color: #28a745; }
         .verdict-high { background-color: #fd7e14; }
         .verdict-bad { background-color: #dc3545; }
+        .small-text { font-size: 12px; color: #666; margin-top: 5px; display: block; }
+        .error { color: #dc3545; font-weight: bold; text-align: center; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>5-Year Manual Fundamental Analyzer</h1>
+    <h1>Automated Fundamental Analyzer</h1>
     
-    <div class="guide-box">
-        <strong>💡 How to input data:</strong> Find the "Consolidated Statements of Income" and "Balance Sheets" in the company's 10-K. Input numbers consistently (e.g., if Revenue is 383,285 in millions, just type 383285 for all currency fields). EPS must be the exact dollar amount (e.g., 6.15). Year 5 is the most recent year.
+    <div class="control-panel">
+        <div class="input-group">
+            <div>
+                <label for="apiKey">FMP API Key (Stored locally):</label>
+                <input type="password" id="apiKey" placeholder="Paste your free API key here">
+            </div>
+            <div>
+                <label for="ticker">Stock Ticker:</label>
+                <input type="text" id="ticker" placeholder="e.g. AAPL, MSFT, SAP">
+            </div>
+        </div>
+        <button onclick="fetchData()">Run Full Analysis</button>
+        <div id="errorMessage" class="error"></div>
     </div>
-
-    <div class="price-input">
-        <label><strong>Current Stock Price ($):</strong></label>
-        <input type="number" id="currentPrice" placeholder="e.g. 150.00" step="0.01">
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Metric</th>
-                <th>Year 1 (Oldest)</th>
-                <th>Year 2</th>
-                <th>Year 3</th>
-                <th>Year 4</th>
-                <th>Year 5 (Current)</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td><strong>Revenue</strong><br><small>(Top line)</small></td>
-                <td><input type="number" id="r1"></td><td><input type="number" id="r2"></td><td><input type="number" id="r3"></td><td><input type="number" id="r4"></td><td><input type="number" id="r5"></td>
-            </tr>
-            <tr>
-                <td><strong>Net Income</strong><br><small>(Bottom line profit)</small></td>
-                <td><input type="number" id="ni1"></td><td><input type="number" id="ni2"></td><td><input type="number" id="ni3"></td><td><input type="number" id="ni4"></td><td><input type="number" id="ni5"></td>
-            </tr>
-            <tr>
-                <td><strong>Long-Term Debt</strong><br><small>(Balance Sheet Liability)</small></td>
-                <td><input type="number" id="d1"></td><td><input type="number" id="d2"></td><td><input type="number" id="d3"></td><td><input type="number" id="d4"></td><td><input type="number" id="d5"></td>
-            </tr>
-            <tr>
-                <td><strong>Basic EPS ($)</strong></td>
-                <td><input type="number" id="eb1" step="0.01"></td><td><input type="number" id="eb2" step="0.01"></td><td><input type="number" id="eb3" step="0.01"></td><td><input type="number" id="eb4" step="0.01"></td><td><input type="number" id="eb5" step="0.01"></td>
-            </tr>
-            <tr>
-                <td><strong>Diluted EPS ($)</strong></td>
-                <td><input type="number" id="ed1" step="0.01"></td><td><input type="number" id="ed2" step="0.01"></td><td><input type="number" id="ed3" step="0.01"></td><td><input type="number" id="ed4" step="0.01"></td><td><input type="number" id="ed5" step="0.01"></td>
-            </tr>
-        </tbody>
-    </table>
-
-    <button onclick="calculateMetrics()">Analyze 5-Year Fundamentals</button>
-
+    
+    <div id="loader" class="loader">Downloading 5-year financials and calculating metrics...</div>
+    
     <div id="dashboard" class="dashboard">
-        <h2>Analysis Results</h2>
+        <h2 id="companyTitle" style="text-align: center; color: #2c3e50;"></h2>
         <div class="metrics-grid" id="metricsGrid"></div>
         <div id="verdictContainer"></div>
     </div>
 </div>
 
 <script>
-    function calculateMetrics() {
-        // Fetch Current Price
-        const price = parseFloat(document.getElementById('currentPrice').value);
-        if (!price || price <= 0) return alert("Please enter a valid current stock price.");
+    async function fetchData() {
+        const apiKey = document.getElementById('apiKey').value.trim();
+        const ticker = document.getElementById('ticker').value.trim().toUpperCase();
+        const errBox = document.getElementById('errorMessage');
 
-        // Fetch Year 1 (Oldest) and Year 5 (Current) for Growth calculations
-        const r1 = parseFloat(document.getElementById('r1').value);
-        const r5 = parseFloat(document.getElementById('r5').value);
-        const ni5 = parseFloat(document.getElementById('ni5').value);
-        const d5 = parseFloat(document.getElementById('d5').value);
-        const eb5 = parseFloat(document.getElementById('eb5').value);
-        const ed5 = parseFloat(document.getElementById('ed5').value);
-        const ed1 = parseFloat(document.getElementById('ed1').value);
+        errBox.style.display = 'none';
+        document.getElementById('dashboard').style.display = 'none';
 
-        // Validation to ensure at least Year 1 and Year 5 are filled
-        if (isNaN(r1) || isNaN(r5) || isNaN(ed5)) {
-            return alert("Please fill out at least Year 1 and Year 5 (Current) data completely to run the analysis.");
+        if (!apiKey) return showError("Please enter your FMP API Key.");
+        if (!ticker) return showError("Please enter a stock ticker.");
+
+        document.getElementById('loader').style.display = 'block';
+
+        try {
+            // Fetch 3 endpoints simultaneously for speed: Price, Income Statement (5 yrs), Balance Sheet (1 yr)
+            const [quoteRes, incomeRes, balanceRes] = await Promise.all([
+                fetch(`https://financialmodelingprep.com/api/v3/quote/${ticker}?apikey=${apiKey}`),
+                fetch(`https://financialmodelingprep.com/api/v3/income-statement/${ticker}?limit=5&apikey=${apiKey}`),
+                fetch(`https://financialmodelingprep.com/api/v3/balance-sheet-statement/${ticker}?limit=1&apikey=${apiKey}`)
+            ]);
+
+            const quoteData = await quoteRes.json();
+            const incomeData = await incomeRes.json();
+            const balanceData = await balanceRes.json();
+
+            // Error handling for bad API keys or invalid tickers
+            if (incomeData['Error Message']) throw new Error("Invalid API Key or API limit reached.");
+            if (quoteData.length === 0 || incomeData.length === 0) throw new Error("Ticker not found or no financial data available.");
+
+            processMetrics(ticker, quoteData[0], incomeData, balanceData[0]);
+
+        } catch (error) {
+            showError(error.message);
+        } finally {
+            document.getElementById('loader').style.display = 'none';
         }
+    }
+
+    function showError(msg) {
+        const errBox = document.getElementById('errorMessage');
+        errBox.innerText = `Error: ${msg}`;
+        errBox.style.display = 'block';
+    }
+
+    function processMetrics(ticker, quote, incomeHistory, currentBalance) {
+        const companyName = quote.name;
+        const currentPrice = quote.price;
+        
+        // FMP returns data from newest (index 0) to oldest
+        const currentIncome = incomeHistory[0];
+        const oldestIncome = incomeHistory[incomeHistory.length - 1]; // Up to 5 years ago
+        const yearsOfData = incomeHistory.length;
+
+        document.getElementById('companyTitle').innerText = `${companyName} (${ticker}) Analysis`;
 
         let html = '';
         let isSustainable = true;
 
         // 1. Current P/E Ratio
         let peRatio = 0;
-        if (ed5 > 0) {
-            peRatio = price / ed5;
+        if (currentIncome.epsdiluted > 0) {
+            peRatio = currentPrice / currentIncome.epsdiluted;
             const peClass = peRatio > 25 ? 'alert-yellow' : 'alert-green';
-            html += createCard('Current P/E Ratio', `${peRatio.toFixed(2)}x`, peClass, `Based on Current Diluted EPS of $${ed5}`);
+            html += createCard('Current P/E Ratio', `${peRatio.toFixed(2)}x`, peClass, `Price: $${currentPrice.toFixed(2)} / EPS: $${currentIncome.epsdiluted.toFixed(2)}`);
         } else {
-            html += createCard('Current P/E Ratio', 'Negative', 'alert-red', 'Company is losing money currently.');
+            html += createCard('Current P/E Ratio', 'Negative', 'alert-red', 'Company is currently losing money.');
             isSustainable = false;
         }
 
-        // 2. 5-Year Revenue Growth (CAGR)
-        if (r1 > 0 && r5 > 0) {
-            // Formula: (Ending Value / Beginning Value)^(1/Years) - 1. We have 5 data points, so 4 years of growth.
-            const revCagr = (Math.pow((r5 / r1), (1 / 4)) - 1) * 100;
+        // 2. Revenue CAGR (Compound Annual Growth Rate)
+        if (yearsOfData > 1 && oldestIncome.revenue > 0) {
+            const timePeriods = yearsOfData - 1; 
+            const revCagr = (Math.pow((currentIncome.revenue / oldestIncome.revenue), (1 / timePeriods)) - 1) * 100;
             const revClass = revCagr <= 0 ? 'alert-red' : (revCagr < 5 ? 'alert-yellow' : 'alert-green');
             if (revCagr <= 0) isSustainable = false;
-            html += createCard('5-Year Revenue CAGR', `${revCagr.toFixed(2)}%`, revClass, `Annualized growth rate from Year 1 to Year 5.`);
+            html += createCard(`${yearsOfData}-Year Revenue CAGR`, `${revCagr.toFixed(2)}%`, revClass, `From $${(oldestIncome.revenue/1e9).toFixed(2)}B to $${(currentIncome.revenue/1e9).toFixed(2)}B`);
+        } else {
+            html += createCard('Revenue Growth', 'N/A', 'alert-yellow', 'Not enough historical data.');
         }
 
-        // 3. 5-Year EPS Growth (CAGR)
-        if (ed1 > 0 && ed5 > 0) {
-            const epsCagr = (Math.pow((ed5 / ed1), (1 / 4)) - 1) * 100;
+        // 3. EPS CAGR
+        if (yearsOfData > 1 && oldestIncome.epsdiluted > 0 && currentIncome.epsdiluted > 0) {
+            const timePeriods = yearsOfData - 1;
+            const epsCagr = (Math.pow((currentIncome.epsdiluted / oldestIncome.epsdiluted), (1 / timePeriods)) - 1) * 100;
             const epsClass = epsCagr <= 0 ? 'alert-red' : (epsCagr < 5 ? 'alert-yellow' : 'alert-green');
             if (epsCagr <= 0) isSustainable = false;
-            html += createCard('5-Year EPS CAGR', `${epsCagr.toFixed(2)}%`, epsClass, `Profitability growth rate from Year 1 to Year 5.`);
+            html += createCard(`${yearsOfData}-Year EPS CAGR`, `${epsCagr.toFixed(2)}%`, epsClass, `From $${oldestIncome.epsdiluted.toFixed(2)} to $${currentIncome.epsdiluted.toFixed(2)}`);
         } else {
-            html += createCard('5-Year EPS CAGR', 'N/A', 'alert-red', 'Negative earnings complicate compound growth calculations.');
+            html += createCard('EPS Growth', 'N/A', 'alert-yellow', 'Negative earnings prevent CAGR calculation.');
             isSustainable = false;
         }
 
-        // 4. Current Net Income Margin
-        if (ni5 && r5 > 0) {
-            const margin = (ni5 / r5) * 100;
+        // 4. Net Income Margin
+        if (currentIncome.netIncome && currentIncome.revenue > 0) {
+            const margin = (currentIncome.netIncome / currentIncome.revenue) * 100;
             const marginClass = margin < 0 ? 'alert-red' : (margin < 10 ? 'alert-yellow' : 'alert-green');
             if (margin < 0) isSustainable = false;
-            html += createCard('Current Net Margin', `${margin.toFixed(2)}%`, marginClass, `How much of current revenue becomes pure profit.`);
+            html += createCard('Net Income Margin', `${margin.toFixed(2)}%`, marginClass, `Net Income: $${(currentIncome.netIncome/1e9).toFixed(2)}B`);
         }
 
         // 5. Debt to Revenue Ratio
-        if (!isNaN(d5) && r5 > 0) {
-            const debtRatio = d5 / r5;
+        if (currentBalance && currentBalance.longTermDebt !== undefined && currentIncome.revenue > 0) {
+            const debtRatio = currentBalance.longTermDebt / currentIncome.revenue;
             const debtClass = debtRatio > 1.5 ? 'alert-red' : (debtRatio > 0.8 ? 'alert-yellow' : 'alert-green');
             if (debtRatio > 2.0) isSustainable = false;
-            html += createCard('Current Debt / Revenue', `${debtRatio.toFixed(2)}x`, debtClass, `Current Long Term Debt vs Current Revenue.`);
+            html += createCard('Debt / Revenue', `${debtRatio.toFixed(2)}x`, debtClass, `Long Term Debt: $${(currentBalance.longTermDebt/1e9).toFixed(2)}B`);
         }
 
-        // 6. Current Share Dilution
-        if (eb5 && ed5 && eb5 > 0) {
-            const dilution = ((eb5 - ed5) / eb5) * 100;
+        // 6. Share Dilution (Current Year)
+        if (currentIncome.eps && currentIncome.epsdiluted && currentIncome.eps > 0) {
+            const dilution = ((currentIncome.eps - currentIncome.epsdiluted) / currentIncome.eps) * 100;
             const dilClass = dilution > 5 ? 'alert-yellow' : 'alert-green';
-            html += createCard('Current Share Dilution', `${dilution.toFixed(2)}%`, dilClass, `Difference between Basic and Diluted EPS.`);
+            html += createCard('Current Share Dilution', `${dilution.toFixed(2)}%`, dilClass, `Basic: $${currentIncome.eps.toFixed(2)} | Diluted: $${currentIncome.epsdiluted.toFixed(2)}`);
         }
 
         document.getElementById('metricsGrid').innerHTML = html;
 
-        // FINAL VERDICT
+        // --- FINAL VERDICT ---
         let verdictText = "";
         let verdictClass = "";
 
@@ -190,7 +203,7 @@
         return `<div class="metric ${cssClass}">
                     <strong>${title}</strong><br>
                     <span style="font-size: 26px;">${value}</span><br>
-                    <span style="font-size: 13px; color: #666;">${subtext}</span>
+                    <span class="small-text">${subtext}</span>
                 </div>`;
     }
 </script>
