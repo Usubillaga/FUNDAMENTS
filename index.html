@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEC Fundamental Analyzer</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; color: #333; padding: 20px; line-height: 1.6; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h1 { color: #1a73e8; text-align: center; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; }
+        .control-panel { display: grid; grid-template-columns: 1fr 1fr auto; gap: 15px; margin-bottom: 20px; background: #f8f9fa; padding: 20px; border-radius: 8px; }
+        label { font-weight: bold; font-size: 14px; color: #555; display: block; margin-bottom: 5px; }
+        select, input, button { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; box-sizing: border-box; }
+        button { background-color: #1a73e8; color: white; border: none; cursor: pointer; font-weight: bold; transition: background 0.3s; height: 100%; }
+        button:hover { background-color: #1557b0; }
+        .loader { display: none; text-align: center; font-style: italic; color: #666; margin: 20px 0; }
+        .dashboard { display: none; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .metric { background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #e1e4e8; border-left: 5px solid #1a73e8; }
+        .alert-red { border-left-color: #dc3545; background-color: #fff5f5; }
+        .alert-yellow { border-left-color: #ffc107; background-color: #fffdf5; }
+        .alert-green { border-left-color: #28a745; background-color: #f4fff5; }
+        .verdict-box { margin-top: 20px; padding: 20px; border-radius: 8px; text-align: center; font-size: 20px; font-weight: bold; color: white; text-transform: uppercase; letter-spacing: 1px; }
+        .verdict-good { background-color: #28a745; }
+        .verdict-high { background-color: #fd7e14; }
+        .verdict-bad { background-color: #dc3545; }
+        .small-text { font-size: 12px; color: #666; margin-top: 5px; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>SEC Fundamentals & Valuation Analyzer</h1>
+    
+    <div class="control-panel">
+        <div>
+            <label for="stockSelect">Select Company (Repository):</label>
+            <select id="stockSelect"></select>
+        </div>
+        <div>
+            <label for="manualPrice">Current Stock Price ($):</label>
+            <input type="number" id="manualPrice" placeholder="e.g. 150.50" step="0.01" min="0.01" required>
+        </div>
+        <div>
+            <label>&nbsp;</label>
+            <button onclick="runAnalysis()">Run Analysis</button>
+        </div>
+    </div>
+    
+    <div id="loader" class="loader">Fetching 10-K/10-Q data from SEC EDGAR via proxy... Please wait.</div>
+    
+    <div id="dashboard" class="dashboard">
+        <h2 id="companyTitle"></h2>
+        <div class="metrics-grid" id="metricsGrid"></div>
+        <div id="verdictContainer"></div>
+    </div>
+</div>
+
+<script>
+    // --- 1. STOCK REPOSITORY ---
+    // A representative sample. You can expand this list infinitely.
+    const stockRepository = {
+        "S&P 500": [
+            { ticker: "AAPL", name: "Apple Inc." },
+            { ticker: "MSFT", name: "Microsoft Corp." },
+            { ticker: "NVDA", name: "NVIDIA Corp." },
+            { ticker: "JNJ", name: "Johnson & Johnson" }
+        ],
+        "NASDAQ 100": [
+            { ticker: "TSLA", name: "Tesla, Inc." },
+            { ticker: "META", name: "Meta Platforms" },
+            { ticker: "GOOGL", name: "Alphabet Inc." },
+            { ticker: "AMZN", name: "Amazon.com" }
+        ],
+        "DOW JONES": [
+            { ticker: "UNH", name: "UnitedHealth Group" },
+            { ticker: "GS", name: "Goldman Sachs" },
+            { ticker: "HD", name: "Home Depot" },
+            { ticker: "CAT", name: "Caterpillar Inc." }
+        ],
+        "DAX (US ADRs)": [
+            { ticker: "SAP", name: "SAP SE" },
+            { ticker: "SIEGY", name: "Siemens AG" },
+            { ticker: "DTEGY", name: "Deutsche Telekom" }
+        ],
+        "CHINA (US ADRs)": [
+            { ticker: "BABA", name: "Alibaba Group" },
+            { ticker: "JD", name: "JD.com" },
+            { ticker: "PDD", name: "PDD Holdings" }
+        ]
+    };
+
+    // Populate the dropdown on load
+    window.onload = () => {
+        const select = document.getElementById('stockSelect');
+        for (const [category, stocks] of Object.entries(stockRepository)) {
+            const optgroup = document.createElement('optgroup');
+            optgroup.label = category;
+            stocks.forEach(stock => {
+                const option = document.createElement('option');
+                option.value = stock.ticker;
+                option.textContent = `${stock.ticker} - ${stock.name}`;
+                optgroup.appendChild(option);
+            });
+            select.appendChild(optgroup);
+        }
+    };
+
+    const CORS_PROXY = "https://corsproxy.io/?"; 
+
+    // --- 2. MAIN EXECUTION ---
+    async function runAnalysis() {
+        const ticker = document.getElementById('stockSelect').value;
+        const currentPrice = parseFloat(document.getElementById('manualPrice').value);
+
+        if (!currentPrice || currentPrice <= 0) {
+            alert("Please enter a valid current stock price.");
+            return;
+        }
+
+        document.getElementById('loader').style.display = 'block';
+        document.getElementById('dashboard').style.display = 'none';
+        document.getElementById('metricsGrid').innerHTML = '';
+        document.getElementById('verdictContainer').innerHTML = '';
+
+        try {
+            // Get CIK
+            const urlTickers = `${CORS_PROXY}https://www.sec.gov/files/company_tickers.json`;
+            const resTickers = await fetch(urlTickers);
+            const dataTickers = await resTickers.json();
+            
+            let cik = null;
+            let companyName = "";
+            for (let key in dataTickers) {
+                if (dataTickers[key].ticker === ticker) {
+                    cik = String(dataTickers[key].cik_str).padStart(10, '0');
+                    companyName = dataTickers[key].title;
+                    break;
+                }
+            }
+
+            if (!cik) throw new Error("Ticker not found in SEC database. It might not file standard EDGAR reports.");
+
+            // Get Company Facts
+            const urlFacts = `${CORS_PROXY}https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`;
+            const resFacts = await fetch(urlFacts);
+            const dataFacts = await resFacts.json();
+
+            // Foreign companies use IFRS, US companies use US-GAAP
+            const accountingStandard = dataFacts.facts['us-gaap'] ? dataFacts.facts['us-gaap'] : dataFacts.facts['ifrs-full'];
+            
+            if (!accountingStandard) throw new Error("Could not find US-GAAP or IFRS accounting data for this company.");
+
+            processMetrics(ticker, companyName, accountingStandard, currentPrice);
+
+        } catch (error) {
+            console.error(error);
+            alert("Error fetching data: " + error.message);
+        } finally {
+            document.getElementById('loader').style.display = 'none';
+        }
+    }
+
+    // --- 3. DATA PROCESSING & MATH ---
+    function processMetrics(ticker, companyName, data, price) {
+        document.getElementById('companyTitle').innerText = `${companyName} (${ticker}) Analysis`;
+
+        // Helper to extract the most recent annual value (10-K / 20-F)
+        const getValue = (tags, yearsBack = 0, isPerShare = false) => {
+            for (let tag of tags) {
+                if (data[tag]) {
+                    const unitKey = isPerShare ? 'USD/shares' : 'USD';
+                    if (data[tag].units && data[tag].units[unitKey]) {
+                        // Filter CY (annual) frames, usually length 6 e.g., "CY2023"
+                        const annuals = data[tag].units[unitKey].filter(r => r.frame && r.frame.length === 6); 
+                        if (annuals.length > yearsBack) {
+                            return annuals[annuals.length - 1 - yearsBack].val;
+                        }
+                    }
+                }
+            }
+            return null;
+        };
+
+        // Extracting Data (Multiple tags to account for different SEC reporting styles)
+        const revNow = getValue(['Revenues', 'SalesRevenueNet', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenue'], 0);
+        const revPast = getValue(['Revenues', 'SalesRevenueNet', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenue'], 1);
+        
+        const netIncome = getValue(['NetIncomeLoss', 'ProfitLoss'], 0);
+        const debt = getValue(['LongTermDebt', 'LongTermDebtNoncurrent', 'DebtInstrumentCarryingAmount'], 0) || 0; // Fallback to 0 if no debt found
+        
+        const epsDiluted = getValue(['EarningsPerShareDiluted', 'BasicAndDilutedEarningsPerShare'], 0, true);
+        const epsBasic = getValue(['EarningsPerShareBasic', 'BasicAndDilutedEarningsPerShare'], 0, true);
+        const epsPast = getValue(['EarningsPerShareDiluted', 'BasicAndDilutedEarningsPerShare'], 1, true);
+
+        let html = '';
+
+        // --- MATH & ALARMS ---
+        let isSustainable = true;
+
+        // 1. P/E Ratio
+        let peRatio = 0;
+        if (epsDiluted && epsDiluted > 0) {
+            peRatio = price / epsDiluted;
+            const peClass = peRatio > 25 ? 'alert-yellow' : 'alert-green';
+            html += createCard('P/E Ratio', `${peRatio.toFixed(2)}x`, peClass, `Price: $${price} / EPS: $${epsDiluted}`);
+        } else {
+            html += createCard('P/E Ratio', 'N/A or Negative', 'alert-red', 'Company is losing money (Negative EPS).');
+            isSustainable = false;
+        }
+
+        // 2. Revenue Growth (YoY)
+        if (revNow && revPast) {
+            const revGrowth = ((revNow - revPast) / revPast) * 100;
+            const revClass = revGrowth < 0 ? 'alert-red' : 'alert-green';
+            if (revGrowth < 0) isSustainable = false;
+            html += createCard('Revenue Growth (YoY)', `${revGrowth.toFixed(2)}%`, revClass, `Current: $${(revNow/1e9).toFixed(2)}B | Previous: $${(revPast/1e9).toFixed(2)}B`);
+        }
+
+        // 3. EPS Growth (YoY)
+        if (epsDiluted && epsPast) {
+            const epsGrowth = ((epsDiluted - epsPast) / Math.abs(epsPast)) * 100;
+            const epsClass = epsGrowth < 0 ? 'alert-red' : 'alert-green';
+            if (epsGrowth < 0) isSustainable = false;
+            html += createCard('EPS Growth (YoY)', `${epsGrowth.toFixed(2)}%`, epsClass, `Current: $${epsDiluted} | Previous: $${epsPast}`);
+        }
+
+        // 4. Net Income Margin
+        if (netIncome && revNow) {
+            const margin = (netIncome / revNow) * 100;
+            const marginClass = margin < 0 ? 'alert-red' : (margin < 10 ? 'alert-yellow' : 'alert-green');
+            if (margin < 0) isSustainable = false;
+            html += createCard('Net Income Margin', `${margin.toFixed(2)}%`, marginClass, `Net Income: $${(netIncome/1e9).toFixed(2)}B`);
+        }
+
+        // 5. Debt to Revenue Ratio
+        if (revNow) {
+            const debtRatio = debt / revNow;
+            const debtClass = debtRatio > 1.5 ? 'alert-red' : (debtRatio > 0.8 ? 'alert-yellow' : 'alert-green');
+            if (debtRatio > 2.0) isSustainable = false;
+            html += createCard('Debt / Revenue Ratio', `${debtRatio.toFixed(2)}x`, debtClass, `Long Term Debt: $${(debt/1e9).toFixed(2)}B`);
+        }
+
+        // 6. Share Dilution
+        if (epsBasic && epsDiluted && epsBasic > 0) {
+            const dilution = ((epsBasic - epsDiluted) / epsBasic) * 100;
+            const dilClass = dilution > 5 ? 'alert-yellow' : 'alert-green';
+            html += createCard('Share Dilution', `${dilution.toFixed(2)}%`, dilClass, `Basic EPS: $${epsBasic} | Diluted EPS: $${epsDiluted}`);
+        }
+
+        document.getElementById('metricsGrid').innerHTML = html;
+
+        // --- 4. FINAL VERDICT LOGIC ---
+        let verdictText = "";
+        let verdictClass = "";
+
+        if (!isSustainable) {
+            verdictText = "Unsustainable company";
+            verdictClass = "verdict-bad";
+        } else {
+            if (peRatio > 0 && peRatio <= 25) {
+                verdictText = "Sustainable company at a good price";
+                verdictClass = "verdict-good";
+            } else {
+                verdictText = "Sustainable company at a high price";
+                verdictClass = "verdict-high";
+            }
+        }
+
+        document.getElementById('verdictContainer').innerHTML = `<div class="verdict-box ${verdictClass}">${verdictText}</div>`;
+        document.getElementById('dashboard').style.display = 'block';
+    }
+
+    // Helper to generate HTML cards
+    function createCard(title, value, cssClass, subtext) {
+        return `<div class="metric ${cssClass}">
+                    <strong>${title}</strong><br>
+                    <span style="font-size: 24px;">${value}</span>
+                    <span class="small-text">${subtext}</span>
+                </div>`;
+    }
+</script>
+
+</body>
+</html>
