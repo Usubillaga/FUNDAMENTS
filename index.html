@@ -25,6 +25,7 @@
         .verdict-high { background-color: #fd7e14; }
         .verdict-bad { background-color: #dc3545; }
         .small-text { font-size: 12px; color: #666; margin-top: 5px; display: block; }
+        .error-message { color: #dc3545; text-align: center; font-weight: bold; margin-top: 20px; display: none; }
     </style>
 </head>
 <body>
@@ -34,7 +35,7 @@
     
     <div class="control-panel">
         <div>
-            <label for="stockSelect">Select Company (Repository):</label>
+            <label for="stockSelect">Select Company:</label>
             <select id="stockSelect"></select>
         </div>
         <div>
@@ -47,7 +48,8 @@
         </div>
     </div>
     
-    <div id="loader" class="loader">Fetching 10-K/10-Q data from SEC EDGAR via proxy... Please wait.</div>
+    <div id="loader" class="loader">Fetching financial data from SEC EDGAR... Please wait.</div>
+    <div id="errorMessage" class="error-message"></div>
     
     <div id="dashboard" class="dashboard">
         <h2 id="companyTitle"></h2>
@@ -57,40 +59,44 @@
 </div>
 
 <script>
-    // --- 1. STOCK REPOSITORY ---
-    // A representative sample. You can expand this list infinitely.
+    // --- 1. EXPANDED STOCK REPOSITORY ---
     const stockRepository = {
-        "S&P 500": [
-            { ticker: "AAPL", name: "Apple Inc." },
-            { ticker: "MSFT", name: "Microsoft Corp." },
-            { ticker: "NVDA", name: "NVIDIA Corp." },
-            { ticker: "JNJ", name: "Johnson & Johnson" }
+        "DOW JONES (All 30)": [
+            { ticker: "AAPL", name: "Apple Inc." }, { ticker: "AMGN", name: "Amgen" }, { ticker: "AXP", name: "American Express" },
+            { ticker: "BA", name: "Boeing" }, { ticker: "CAT", name: "Caterpillar" }, { ticker: "CRM", name: "Salesforce" },
+            { ticker: "CSCO", name: "Cisco Systems" }, { ticker: "CVX", name: "Chevron" }, { ticker: "DIS", name: "Walt Disney" },
+            { ticker: "DOW", name: "Dow Inc." }, { ticker: "GS", name: "Goldman Sachs" }, { ticker: "HD", name: "Home Depot" },
+            { ticker: "HON", name: "Honeywell" }, { ticker: "IBM", name: "IBM" }, { ticker: "INTC", name: "Intel" },
+            { ticker: "JNJ", name: "Johnson & Johnson" }, { ticker: "JPM", name: "JPMorgan Chase" }, { ticker: "KO", name: "Coca-Cola" },
+            { ticker: "MCD", name: "McDonald's" }, { ticker: "MMM", name: "3M" }, { ticker: "MRK", name: "Merck & Co." },
+            { ticker: "MSFT", name: "Microsoft" }, { ticker: "NKE", name: "Nike" }, { ticker: "PG", name: "Procter & Gamble" },
+            { ticker: "TRV", name: "Travelers" }, { ticker: "UNH", name: "UnitedHealth" }, { ticker: "V", name: "Visa" },
+            { ticker: "VZ", name: "Verizon" }, { ticker: "WBA", name: "Walgreens Boots" }, { ticker: "WMT", name: "Walmart" }
         ],
-        "NASDAQ 100": [
-            { ticker: "TSLA", name: "Tesla, Inc." },
-            { ticker: "META", name: "Meta Platforms" },
-            { ticker: "GOOGL", name: "Alphabet Inc." },
-            { ticker: "AMZN", name: "Amazon.com" }
+        "S&P 500 (Top Selection)": [
+            { ticker: "NVDA", name: "NVIDIA Corp." }, { ticker: "GOOGL", name: "Alphabet Inc." }, { ticker: "AMZN", name: "Amazon" },
+            { ticker: "META", name: "Meta Platforms" }, { ticker: "TSLA", name: "Tesla, Inc." }, { ticker: "BRK-B", name: "Berkshire Hathaway" },
+            { ticker: "LLY", name: "Eli Lilly" }, { ticker: "AVGO", name: "Broadcom" }, { ticker: "COST", name: "Costco" },
+            { ticker: "ABBV", name: "AbbVie" }, { ticker: "PEP", name: "PepsiCo" }, { ticker: "TMO", name: "Thermo Fisher" },
+            { ticker: "NFLX", name: "Netflix" }, { ticker: "ADBE", name: "Adobe" }, { ticker: "AMD", name: "AMD" }
         ],
-        "DOW JONES": [
-            { ticker: "UNH", name: "UnitedHealth Group" },
-            { ticker: "GS", name: "Goldman Sachs" },
-            { ticker: "HD", name: "Home Depot" },
-            { ticker: "CAT", name: "Caterpillar Inc." }
+        "NASDAQ 100 (Top Selection)": [
+            { ticker: "QCOM", name: "Qualcomm" }, { ticker: "TXN", name: "Texas Instruments" }, { ticker: "AMAT", name: "Applied Materials" },
+            { ticker: "INTU", name: "Intuit" }, { ticker: "ISRG", name: "Intuitive Surgical" }, { ticker: "BKNG", name: "Booking Holdings" },
+            { ticker: "SBUX", name: "Starbucks" }, { ticker: "GILD", name: "Gilead Sciences" }, { ticker: "MDLZ", name: "Mondelez" }
         ],
-        "DAX (US ADRs)": [
-            { ticker: "SAP", name: "SAP SE" },
-            { ticker: "SIEGY", name: "Siemens AG" },
-            { ticker: "DTEGY", name: "Deutsche Telekom" }
+        "DAX - GERMANY (US ADRs)": [
+            { ticker: "SAP", name: "SAP SE" }, { ticker: "SIEGY", name: "Siemens AG" }, { ticker: "DTEGY", name: "Deutsche Telekom" },
+            { ticker: "ALIZY", name: "Allianz SE" }, { ticker: "BMWYY", name: "BMW AG" }, { ticker: "MBGYY", name: "Mercedes-Benz" },
+            { ticker: "POAHY", name: "Porsche SE" }, { ticker: "BAYRY", name: "Bayer AG" }, { ticker: "VWAGY", name: "Volkswagen AG" }
         ],
         "CHINA (US ADRs)": [
-            { ticker: "BABA", name: "Alibaba Group" },
-            { ticker: "JD", name: "JD.com" },
-            { ticker: "PDD", name: "PDD Holdings" }
+            { ticker: "BABA", name: "Alibaba Group" }, { ticker: "JD", name: "JD.com" }, { ticker: "PDD", name: "PDD Holdings" },
+            { ticker: "BIDU", name: "Baidu" }, { ticker: "NTES", name: "NetEase" }, { ticker: "NIO", name: "NIO Inc." },
+            { ticker: "XPEV", name: "XPeng" }, { ticker: "LI", name: "Li Auto" }, { ticker: "TCOM", name: "Trip.com" }
         ]
     };
 
-    // Populate the dropdown on load
     window.onload = () => {
         const select = document.getElementById('stockSelect');
         for (const [category, stocks] of Object.entries(stockRepository)) {
@@ -108,13 +114,16 @@
 
     const CORS_PROXY = "https://corsproxy.io/?"; 
 
-    // --- 2. MAIN EXECUTION ---
+    // --- 2. MAIN EXECUTION WITH SAFE ERROR HANDLING ---
     async function runAnalysis() {
         const ticker = document.getElementById('stockSelect').value;
         const currentPrice = parseFloat(document.getElementById('manualPrice').value);
+        const errBox = document.getElementById('errorMessage');
+
+        errBox.style.display = 'none';
 
         if (!currentPrice || currentPrice <= 0) {
-            alert("Please enter a valid current stock price.");
+            showError("Please enter a valid current stock price.");
             return;
         }
 
@@ -131,47 +140,64 @@
             
             let cik = null;
             let companyName = "";
+            
+            // Handle Berkshire Hathaway's weird ticker formatting in SEC database
+            const secTickerSearch = ticker === "BRK-B" ? "BRK-B" : ticker;
+
             for (let key in dataTickers) {
-                if (dataTickers[key].ticker === ticker) {
+                if (dataTickers[key].ticker === secTickerSearch) {
                     cik = String(dataTickers[key].cik_str).padStart(10, '0');
                     companyName = dataTickers[key].title;
                     break;
                 }
             }
 
-            if (!cik) throw new Error("Ticker not found in SEC database. It might not file standard EDGAR reports.");
+            if (!cik) throw new Error(`Ticker ${ticker} not found in SEC EDGAR database.`);
 
             // Get Company Facts
             const urlFacts = `${CORS_PROXY}https://data.sec.gov/api/xbrl/companyfacts/CIK${cik}.json`;
             const resFacts = await fetch(urlFacts);
             const dataFacts = await resFacts.json();
 
-            // Foreign companies use IFRS, US companies use US-GAAP
-            const accountingStandard = dataFacts.facts['us-gaap'] ? dataFacts.facts['us-gaap'] : dataFacts.facts['ifrs-full'];
+            // Safe property checking to prevent "Cannot read properties of undefined (reading 'us-gaap')"
+            if (!dataFacts || !dataFacts.facts) {
+                throw new Error("The SEC returned an empty or invalid dataset for this company.");
+            }
+
+            const facts = dataFacts.facts;
+            const accountingStandard = facts['us-gaap'] || facts['ifrs-full'];
             
-            if (!accountingStandard) throw new Error("Could not find US-GAAP or IFRS accounting data for this company.");
+            if (!accountingStandard) {
+                throw new Error(`No US-GAAP or IFRS accounting tags found for ${ticker}. The company might file using non-standard XBRL tags or relies on OTC exemptions.`);
+            }
 
             processMetrics(ticker, companyName, accountingStandard, currentPrice);
 
         } catch (error) {
             console.error(error);
-            alert("Error fetching data: " + error.message);
+            showError(error.message);
         } finally {
             document.getElementById('loader').style.display = 'none';
         }
     }
 
-    // --- 3. DATA PROCESSING & MATH ---
+    function showError(message) {
+        const errBox = document.getElementById('errorMessage');
+        errBox.innerText = `Error: ${message}`;
+        errBox.style.display = 'block';
+    }
+
+    // --- 3. ROBUST DATA PROCESSING & MATH ---
     function processMetrics(ticker, companyName, data, price) {
         document.getElementById('companyTitle').innerText = `${companyName} (${ticker}) Analysis`;
 
-        // Helper to extract the most recent annual value (10-K / 20-F)
+        // Hardened helper function to extract values without crashing
         const getValue = (tags, yearsBack = 0, isPerShare = false) => {
             for (let tag of tags) {
-                if (data[tag]) {
+                if (data[tag] && data[tag].units) {
                     const unitKey = isPerShare ? 'USD/shares' : 'USD';
-                    if (data[tag].units && data[tag].units[unitKey]) {
-                        // Filter CY (annual) frames, usually length 6 e.g., "CY2023"
+                    if (data[tag].units[unitKey]) {
+                        // SEC uses CY2023 for annual reports (length 6)
                         const annuals = data[tag].units[unitKey].filter(r => r.frame && r.frame.length === 6); 
                         if (annuals.length > yearsBack) {
                             return annuals[annuals.length - 1 - yearsBack].val;
@@ -179,23 +205,19 @@
                     }
                 }
             }
-            return null;
+            return null; // Return null safely if nothing is found
         };
 
-        // Extracting Data (Multiple tags to account for different SEC reporting styles)
-        const revNow = getValue(['Revenues', 'SalesRevenueNet', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenue'], 0);
-        const revPast = getValue(['Revenues', 'SalesRevenueNet', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenue'], 1);
-        
+        const revNow = getValue(['Revenues', 'SalesRevenueNet', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenue', 'RevenuesNetOfInterestExpense'], 0);
+        const revPast = getValue(['Revenues', 'SalesRevenueNet', 'RevenueFromContractWithCustomerExcludingAssessedTax', 'Revenue', 'RevenuesNetOfInterestExpense'], 1);
         const netIncome = getValue(['NetIncomeLoss', 'ProfitLoss'], 0);
-        const debt = getValue(['LongTermDebt', 'LongTermDebtNoncurrent', 'DebtInstrumentCarryingAmount'], 0) || 0; // Fallback to 0 if no debt found
+        const debt = getValue(['LongTermDebt', 'LongTermDebtNoncurrent', 'DebtInstrumentCarryingAmount'], 0) || 0; 
         
         const epsDiluted = getValue(['EarningsPerShareDiluted', 'BasicAndDilutedEarningsPerShare'], 0, true);
         const epsBasic = getValue(['EarningsPerShareBasic', 'BasicAndDilutedEarningsPerShare'], 0, true);
         const epsPast = getValue(['EarningsPerShareDiluted', 'BasicAndDilutedEarningsPerShare'], 1, true);
 
         let html = '';
-
-        // --- MATH & ALARMS ---
         let isSustainable = true;
 
         // 1. P/E Ratio
@@ -205,28 +227,30 @@
             const peClass = peRatio > 25 ? 'alert-yellow' : 'alert-green';
             html += createCard('P/E Ratio', `${peRatio.toFixed(2)}x`, peClass, `Price: $${price} / EPS: $${epsDiluted}`);
         } else {
-            html += createCard('P/E Ratio', 'N/A or Negative', 'alert-red', 'Company is losing money (Negative EPS).');
+            html += createCard('P/E Ratio', 'N/A or Negative', 'alert-red', 'Company has negative or missing EPS.');
             isSustainable = false;
         }
 
         // 2. Revenue Growth (YoY)
-        if (revNow && revPast) {
+        if (revNow !== null && revPast !== null) {
             const revGrowth = ((revNow - revPast) / revPast) * 100;
             const revClass = revGrowth < 0 ? 'alert-red' : 'alert-green';
             if (revGrowth < 0) isSustainable = false;
-            html += createCard('Revenue Growth (YoY)', `${revGrowth.toFixed(2)}%`, revClass, `Current: $${(revNow/1e9).toFixed(2)}B | Previous: $${(revPast/1e9).toFixed(2)}B`);
+            html += createCard('Revenue Growth (YoY)', `${revGrowth.toFixed(2)}%`, revClass, `Current: $${(revNow/1e9).toFixed(2)}B | Prev: $${(revPast/1e9).toFixed(2)}B`);
+        } else {
+            html += createCard('Revenue Growth', 'Missing Data', 'alert-yellow', 'Revenue tags not found.');
         }
 
         // 3. EPS Growth (YoY)
-        if (epsDiluted && epsPast) {
+        if (epsDiluted !== null && epsPast !== null && epsPast !== 0) {
             const epsGrowth = ((epsDiluted - epsPast) / Math.abs(epsPast)) * 100;
             const epsClass = epsGrowth < 0 ? 'alert-red' : 'alert-green';
             if (epsGrowth < 0) isSustainable = false;
-            html += createCard('EPS Growth (YoY)', `${epsGrowth.toFixed(2)}%`, epsClass, `Current: $${epsDiluted} | Previous: $${epsPast}`);
+            html += createCard('EPS Growth (YoY)', `${epsGrowth.toFixed(2)}%`, epsClass, `Current: $${epsDiluted} | Prev: $${epsPast}`);
         }
 
         // 4. Net Income Margin
-        if (netIncome && revNow) {
+        if (netIncome !== null && revNow !== null && revNow > 0) {
             const margin = (netIncome / revNow) * 100;
             const marginClass = margin < 0 ? 'alert-red' : (margin < 10 ? 'alert-yellow' : 'alert-green');
             if (margin < 0) isSustainable = false;
@@ -234,23 +258,23 @@
         }
 
         // 5. Debt to Revenue Ratio
-        if (revNow) {
+        if (revNow !== null && revNow > 0) {
             const debtRatio = debt / revNow;
             const debtClass = debtRatio > 1.5 ? 'alert-red' : (debtRatio > 0.8 ? 'alert-yellow' : 'alert-green');
             if (debtRatio > 2.0) isSustainable = false;
-            html += createCard('Debt / Revenue Ratio', `${debtRatio.toFixed(2)}x`, debtClass, `Long Term Debt: $${(debt/1e9).toFixed(2)}B`);
+            html += createCard('Debt / Revenue', `${debtRatio.toFixed(2)}x`, debtClass, `Long Term Debt: $${(debt/1e9).toFixed(2)}B`);
         }
 
         // 6. Share Dilution
-        if (epsBasic && epsDiluted && epsBasic > 0) {
+        if (epsBasic !== null && epsDiluted !== null && epsBasic > 0) {
             const dilution = ((epsBasic - epsDiluted) / epsBasic) * 100;
             const dilClass = dilution > 5 ? 'alert-yellow' : 'alert-green';
-            html += createCard('Share Dilution', `${dilution.toFixed(2)}%`, dilClass, `Basic EPS: $${epsBasic} | Diluted EPS: $${epsDiluted}`);
+            html += createCard('Share Dilution', `${dilution.toFixed(2)}%`, dilClass, `Basic: $${epsBasic} | Diluted: $${epsDiluted}`);
         }
 
         document.getElementById('metricsGrid').innerHTML = html;
 
-        // --- 4. FINAL VERDICT LOGIC ---
+        // --- 4. FINAL VERDICT ---
         let verdictText = "";
         let verdictClass = "";
 
@@ -271,7 +295,6 @@
         document.getElementById('dashboard').style.display = 'block';
     }
 
-    // Helper to generate HTML cards
     function createCard(title, value, cssClass, subtext) {
         return `<div class="metric ${cssClass}">
                     <strong>${title}</strong><br>
